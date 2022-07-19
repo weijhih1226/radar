@@ -1,0 +1,46 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%   Constant used for mapping quantities form FURUNO weather radar to 8 bit,
+%   in the conversion of polar .scn files to ODIM_H5.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Mapping constants for 'RATE'
+RATE_Offset=0;
+RATE_Gain=1;
+RATE_NoData=255;
+
+% Mapping constants for 'DBZH'
+DBZH_Offset=-32;
+DBZH_Gain=0.5;
+DBZH_NoData=255;
+
+% Mapping constants for 'VRAD'
+VRAD_Offset=-64;
+VRAD_Gain=0.5;
+VRAD_NoData=255;
+
+% Mapping constants for 'ZDR'
+ZDR_Offset=-4;
+ZDR_Gain=0.032532;
+ZDR_NoData=255;
+
+% Mapping constants for 'KDP'
+KDP_Offset=-20;
+KDP_Gain=0.153862745;
+KDP_NoData=255;
+
+% Mapping constants for 'PHIDP'
+PHIDP_Offset=-180;
+PHIDP_Gain=1.40625;
+PHIDP_NoData=255;
+
+% Mapping constants for 'RHOHV'
+RHOHV_Offset=0;
+RHOHV_Gain=0.00498;
+RHOHV_NoData=255;
+
+% Mapping constants for 'WRAD'
+WRAD_Offset=0;
+WRAD_Gain=0.08328125;
+WRAD_NoData=255;

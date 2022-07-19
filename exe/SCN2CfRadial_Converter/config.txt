@@ -1,0 +1,46 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%   Configuration of the NetCDF converter for converting FURUNO WR series 
+%   polar scan files to polar CF/Radial
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Specify the Online Folder meaning the folder containing the .scn file 
+% output from the radar 
+OnlineFolder='..\..\cases\RAW-NTU\';
+
+% Specify the Archive Folder meaning the output folder for the .nc output files
+ArchiveFolder='..\..\cases\NC-NTU';
+
+% Select deletion of original scn files. If 'true' files will be deleted.
+% if set to 'false' .scn will be moved to ArchiveFolder/scnFiles
+DeleteScnFiles=true;
+
+% Conventions string will specify CF/Radial,
+% plus selected sub-conventions as applicable
+Conventions='CF-Radial';
+
+% CF/Radial version number
+Version='CF-Radial-1.4';
+
+% Where the original data were produced
+Institution='Made_by_Furuno_Electric_CO_LTD';
+
+% Method of production of the original data
+Source='Furuno_WR';
+
+% Miscellaneous information (Any string is appropriate)
+Comment='';
+
+% Name of radar or lidar
+Instrument_name='Furuno_WR';
+
+% List of operating frequencies, in Hertz. In most cases, only a single
+% frequency is used.
+Frequency=9430E+6;
+
+% Antenna beam width H polarization
+Radar_beam_width_h=2.7;
+
+% Antenna beam width V polarization
+Radar_beam_width_v=2.7;

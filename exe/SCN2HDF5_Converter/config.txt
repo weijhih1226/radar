@@ -1,0 +1,43 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%   Configuration of the H5 converter for converting FURUNO WR series 
+%   polar scan files to polar ODIM_H5
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Specify the Online Folder meaning the folder containing the .scn file 
+% output from the radar 
+OnlineFolder='..\..\cases\RAW-NTU\';
+
+% Specify the Archive Folder meaning the output folder for the H5 output files
+ArchiveFolder='..\..\cases\H5-NTU\';
+
+% Select deletion of original scn files. If 'true' files will be deleted.
+% if set to 'false' .scn will be moved to ArchiveFolder/scnFiles
+DeleteScnFiles=true;
+
+% Specify the 'radar source definition' according to the ODIM standard 
+Source='CMT:Furuno_WR';
+
+% Specify the type of radar
+RadarType='Furuno_WR';
+
+% Specify the compression level. Level is a value from zero to nine.
+% A compression level of 0 (zero) indicates no compression.
+% The compression improves, but speed slows progressively from levels 1 through 9
+GzipLevel=7;
+
+% Horizontal half-power (-3 dB) beamwidth in degrees
+beamwH=2.7;
+
+% Vertical half-power (-3 dB) beamwidth in degrees
+beamwV=2.7;
+
+% The name of creator
+h5_converter='Made_by_Furuno_Electric_CO_LTD';
+
+% Wave length of radar in centimeters
+wavelength=3.18;
+
+% Format or information model version
+version='H5rad 2.1';
