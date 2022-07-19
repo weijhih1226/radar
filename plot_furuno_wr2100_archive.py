@@ -1,9 +1,9 @@
-#!/home/C.cwj/Radar/anaconda3/envs/pyart_env/bin/python
+#!/home/C.cwj/anaconda3/envs/pyart_env/bin/python3
 
 ########################################
 #### plot_furuno_wr2100_archive.py #####
 ######## Author: Wei-Jhih Chen #########
-######### Update: 2022/06/09 ###########
+######### Update: 2022/07/19 ###########
 ########################################
 
 import os , glob , time
@@ -11,69 +11,15 @@ import numpy as np
 import datetime as dt
 import matplotlib.pyplot as plt
 import cfg.color as cfgc
+from filter import *
+from convert_grid import *
+from attenuation_correction import *
+from read_furuno_wr2100_archive import *
 from numpy.ma import masked_array as mama
 from datetime import datetime as dtdt
 from matplotlib.colors import ListedColormap , BoundaryNorm , LogNorm
 from cartopy.feature import ShapelyFeature as shpft
-from read_furuno_wr2100_archive import read_rhi
 from scipy.interpolate import griddata as gd
-
-def equivalent_earth_model(elevationvation , altitudeitude , range):
-    # elevationvation: Angle of elevationvation (Units: degree)
-    # altitudeitude: altitudeitude of Station (Units: km)
-    # range: Range (Units: km)
-    a = 6371.25                             # Units: km
-    k_e = 4 / 3
-    theta_e_degree = elevationvation              # Units: degree
-    theta_e = theta_e_degree / 180 * np.pi  # Units: radius
-    hgtEEM = (range ** 2 + (k_e * a) ** 2 + 2 * range * k_e * a * np.sin(theta_e)) ** 0.5 - k_e * a + altitudeitude
-    disEEM = k_e * a * np.arcsin(range * np.cos(theta_e) / (k_e * a + hgtEEM))
-    return disEEM , hgtEEM
-
-def var_filter(filVar , inVar , flMin , flMax):
-    if not(flMin):
-        if flMin == 0:
-            flMin_bool = True
-        else:
-            flMin_bool = False
-    else:
-        flMin_bool = True
-    if not(flMax):
-        if flMax == 0:
-            flMax_bool = True
-        else:
-            flMax_bool = False
-    else:
-        flMax_bool = True
-    if not(flMin_bool) and not(flMax_bool):
-        outVar = inVar
-    elif not(flMin_bool):
-        outVar = mama(inVar , filVar > flMax)
-    elif not(flMax_bool):
-        outVar = mama(inVar , filVar < flMin)
-    else:
-        outVar = mama(inVar , (filVar < flMin) | (filVar > flMax))
-    return outVar
-
-def attenuation_correction(varDZ , varZD , varKD):
-    num_azi_elevation = varDZ.shape[0]
-    num_range = varDZ.shape[1]
-    b1 = 0.233
-    b2 = 1.02
-    d1 = 0.0298
-    d2 = 1.293
-    delta_r = 50
-    Ah = np.zeros([num_azi_elevation , num_range])
-    Adp = np.zeros([num_azi_elevation , num_range])
-    varDZac = mama(np.zeros([num_azi_elevation , num_range]) , np.zeros([num_azi_elevation , num_range]))
-    varZDac = mama(np.zeros([num_azi_elevation , num_range]) , np.zeros([num_azi_elevation , num_range]))
-    varKD = mama(varKD , varKD < 0)
-    for cnt_range in np.arange(0 , num_range):
-        Ah[: , cnt_range] = b1 * varKD[: , cnt_range] ** b2
-        varDZac[: , cnt_range] = varDZ[: , cnt_range] + 2 * np.sum(Ah[: , : cnt_range] , axis = 1) * delta_r / 1000
-        Adp[: , cnt_range] = d1 * varKD[: , cnt_range] ** d2
-        varZDac[: , cnt_range] = varZD[: , cnt_range] + 2 * np.sum(Adp[: , : cnt_range] , axis = 1) * delta_r / 1000
-    return varDZac , varZDac
 
 def plot_rhi(axis , XEEM , ZEEM , var , varInfo , staInfo , azi , datetimeStrLST , outPath):
     ########## Grid ##########
@@ -344,12 +290,12 @@ def main():
 
         ########## Filters ##########
         # varDZ
-        varDZ = var_filter(varDZ , varDZ , flDZ_min , [])
-        varZD = var_filter(varDZ , varZD , flDZ_min , [])
-        varPH = var_filter(varDZ , varPH , flDZ_min , [])
-        varKD = var_filter(varDZ , varKD , flDZ_min , [])
-        varRH = var_filter(varDZ , varRH , flDZ_min , [])
-        varVR = var_filter(varDZ , varVR , flDZ_min , [])
+        varDZ = var_filter(varDZ , varDZ , flDZ_min , None)
+        varZD = var_filter(varDZ , varZD , flDZ_min , None)
+        varPH = var_filter(varDZ , varPH , flDZ_min , None)
+        varKD = var_filter(varDZ , varKD , flDZ_min , None)
+        varRH = var_filter(varDZ , varRH , flDZ_min , None)
+        varVR = var_filter(varDZ , varVR , flDZ_min , None)
         # varRH
         varDZ = var_filter(varRH , varDZ , flRH_min , flRH_max)
         varZD = var_filter(varRH , varZD , flRH_min , flRH_max)
@@ -357,7 +303,7 @@ def main():
         varKD = var_filter(varRH , varKD , flRH_min , flRH_max)
         varVR = var_filter(varRH , varVR , flRH_min , flRH_max)
         # Attenuation Correction
-        varDZac , varZDac = attenuation_correction(varDZ , varZD , varKD)
+        varDZac , varZDac = attenuation_correction_X(varDZ , varZD , varKD)
 
         ########## Plot ##########
         dateStrLST = dtdt.strftime(datetime + dt.timedelta(hours = 8) , '%Y%m%d')

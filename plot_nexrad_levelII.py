@@ -1,7 +1,9 @@
+#!/home/C.cwj/anaconda3/envs/pyart_env/bin/python3
+
 ########################################
 ######## plot_nexrad_levelII.py ########
 ######## Author: Wei-Jhih Chen #########
-######### Update: 2022/06/09 ###########
+######### Update: 2022/07/19 ###########
 ########################################
 
 import os
@@ -12,6 +14,9 @@ import cartopy.crs as ccrs
 import netCDF4 as nc
 import matplotlib.pyplot as plt
 import cfg.color as cfgc
+from filter import *
+from convert_grid import *
+from cross_section import *
 from scipy import io
 from datetime import datetime as dtdt
 from numpy.ma import masked_array as mama
@@ -19,120 +24,6 @@ from cartopy.io.shapereader import Reader as shprd
 from cartopy.feature import ShapelyFeature as shpft
 from matplotlib.colors import ListedColormap , BoundaryNorm
 from scipy.interpolate import griddata as gd
-
-def find_nearest_azimuth(refLon , refLat , selLon , selLat):
-    lon_deg2km = 102.8282                               # Degree to km (Units: km/deg.)
-    lat_deg2km = 111.1361                               # Degree to km (Units: km/deg.)
-    x = (selLon - refLon) * lon_deg2km
-    y = (selLat - refLat) * lat_deg2km
-    dis = np.sqrt(x ** 2 + y ** 2)
-
-    if x >= 0 and y >= 0:
-        azi = np.arctan(y / x)
-    elif x < 0:
-        azi = np.arctan(y / x) + np.pi
-    elif x >= 0 and y < 0:
-        azi = np.arctan(y / x) + np.pi * 2
-    azi = (-azi * 180 / np.pi + 90) % 360
-    return azi , dis
-
-def equivalent_earth_model(elevation , altitude , range):
-    # elevation: Angle of Elevation
-    # altitude: Altitude of Station
-    # range: Range
-    a = 6371.25                                         # Units: km
-    k_e = 4 / 3
-    theta_e_degree = elevation                          # Units: degree
-    theta_e = theta_e_degree / 180 * np.pi              # Units: radius
-    hgtEEM = (range ** 2 + (k_e * a) ** 2 + 2 * range * k_e * a * np.sin(theta_e)) ** 0.5 - k_e * a + altitude
-    disEEM = k_e * a * np.arcsin(range * np.cos(theta_e) / (k_e * a + hgtEEM))
-    return disEEM , hgtEEM
-
-def convert_coordinates(azi , disEEM , hgtEEM , longitude , latitude):
-    lon_deg2km = 102.8282                               # Degree to km (Units: km/deg.)
-    lat_deg2km = 111.1361                               # Degree to km (Units: km/deg.)
-
-    aziEEM = -(azi - 90) * np.pi / 180
-    DisEEM , AziEEM = np.meshgrid(disEEM , aziEEM)      # Distance Meshgrid
-    HgtEEM = np.meshgrid(hgtEEM , aziEEM)[0]            # Height Meshgrid
-    xEEM = DisEEM * np.cos(AziEEM)
-    yEEM = DisEEM * np.sin(AziEEM)
-    LonEEM = longitude + xEEM / lon_deg2km
-    LatEEM = latitude + yEEM / lat_deg2km
-    return LonEEM , LatEEM
-
-def convert_grid_ppi(var):
-    num_azi = np.size(var , 0)
-    num_rng = np.size(var , 1)
-    nan_array = np.empty([num_azi + 1 , 1])
-    nan_array.fill(np.nan)
-    var = np.hstack((np.vstack((var , var[0 , :])) , nan_array))
-    return var
-
-def convert_grid_cs(var):
-    num_ele = np.size(var , 0)
-    num_rng = np.size(var , 1)
-    nan_array1 = np.empty([1 , num_rng])
-    nan_array2 = np.empty([num_ele + 1 , 1])
-    nan_array1.fill(np.nan)
-    nan_array2.fill(np.nan)
-    var = np.hstack((np.vstack((var , nan_array1)) , nan_array2))
-    return var
-
-def cross_section(varDZ , varZD , varPH , varKD , varRH , varVR , varSW , azi , selAzi):
-    selAzi_idx = np.argmin(np.abs(azi - selAzi))
-    selAzi_val = azi[selAzi_idx]
-    varDZ_cs = varDZ[selAzi_idx , :]
-    varZD_cs = varZD[selAzi_idx , :]
-    varPH_cs = varPH[selAzi_idx , :]
-    varKD_cs = varKD[selAzi_idx , :]
-    varRH_cs = varRH[selAzi_idx , :]
-    varVR_cs = varVR[selAzi_idx , :]
-    varSW_cs = varSW[selAzi_idx , :]
-    return varDZ_cs , varZD_cs , varPH_cs , varKD_cs , varRH_cs , varVR_cs , varSW_cs , selAzi_val
-
-def RH_filter(varRH , var , flMin , flMax):
-    var = mama(var , (varRH < flMin) | (varRH > flMax))
-    return var
-
-def SW_filter(varSW , var , flMax):
-    var = mama(var , varSW > flMax)
-    return var
-
-def ZD_filter(varZD , var , flNum):
-    num_azi = np.size(varZD , 0)
-    num_rng = np.size(varZD , 1)
-    varZD = varZD.filled(fill_value = np.nan)
-    varSmZD = np.empty([num_azi , num_rng])
-    varSmZD.fill(np.nan)
-    for cnt_azi in np.arange(0 , num_azi):
-        for cnt_rng in np.arange(0 , num_rng - (flNum - 1)):
-            varSmZD[cnt_azi , cnt_rng + int((flNum - 1) / 2)] = np.mean(varZD[cnt_azi][cnt_rng : cnt_rng + (flNum - 1)])
-    varZD_DV = varZD - varSmZD
-    varZD_SdDV = np.nanstd(varZD_DV)
-    varZD[np.isnan(varSmZD)] = np.nan
-    var[np.isnan(varSmZD)] = np.nan
-    varZD[np.abs(varZD_DV) > varZD_SdDV] = np.nan
-    var[np.abs(varZD_DV) > varZD_SdDV] = np.nan
-    return varZD , var
-
-def KD_filter(varPH , range , smNum):
-    num_azi = np.size(varPH , 0)
-    num_rng = np.size(varPH , 1)
-    varPH = varPH.filled(fill_value = np.nan)
-    varSmPH = np.empty([num_azi , num_rng])
-    varSmPH.fill(np.nan)
-    varKD = np.empty([num_azi , num_rng])
-    varKD.fill(np.nan)
-    for cnt_azi in np.arange(0 , num_azi):
-        for cnt_rng in np.arange(0 , num_rng - 1):
-            if varPH[cnt_azi , cnt_rng + 1] - varPH[cnt_azi , cnt_rng] < -180:
-                varPH[cnt_azi , cnt_rng + 1 : ] = varPH[cnt_azi , cnt_rng + 1 : ] + 360
-        for cnt_rng in np.arange(0 , num_rng - (smNum - 1)):
-            varSmPH[cnt_azi , cnt_rng + int((smNum - 1) / 2)] = np.nanmean(varPH[cnt_azi , cnt_rng : cnt_rng + (smNum - 1)])
-    for cnt_rng in np.arange(0 , num_rng - 1):
-        varKD[: , cnt_rng] = (varSmPH[: , cnt_rng + 1] - varSmPH[: , cnt_rng]) / (range[cnt_rng + 1] - range[cnt_rng]) / 2
-    return varKD
 
 def plot_ppi(axis , LonEEM , LatEEM , var , varInfo , staInfo , eleFix , datetimeStrLST , shpPath , matPath , outPath):
     ########## Grid ##########
@@ -426,7 +317,7 @@ for cnt_eleA in np.arange(0 , num_eleA):
     azimuth = Azimuth[idx_swpStart[cnt_eleA] : idx_swpEnd[cnt_eleA] + 1]
     azimuthG = np.append(azimuth , azimuth[0]) - (360 / num_azi / 2) % 360
     disEEM_G , hgtEEM_G = equivalent_earth_model(eleFix[cnt_eleA] , altitude , rangeG)
-    LonEEM_G , LatEEM_G = convert_coordinates(azimuthG , disEEM_G , hgtEEM_G , longitude , latitude)
+    LonEEM_G , LatEEM_G = polar_to_lonlat(azimuthG , disEEM_G , hgtEEM_G , longitude , latitude)
 
     ########## Filters ##########
     for nameVar_in in nameVars_in:
@@ -437,10 +328,10 @@ for cnt_eleA in np.arange(0 , num_eleA):
             exec(f'var{nameVar_create} = var{nameVar_create}_raw')
     if nameVars_flRH:
         for nameVar_flRH in nameVars_flRH:
-            exec(f'var{nameVar_flRH} = RH_filter(varRH_raw , var{nameVar_flRH}_raw , flRH_min , flRH_max)')
+            exec(f'var{nameVar_flRH} = var_filter(varRH_raw , var{nameVar_flRH}_raw , flRH_min , flRH_max)')
     if nameVars_flSW:
         for nameVar_flSW in nameVars_flSW:
-            exec(f'var{nameVar_flSW} = SW_filter(varSW_raw , var{nameVar_flSW} , flSW_max)')
+            exec(f'var{nameVar_flSW} = var_filter(varSW_raw , var{nameVar_flSW} , None , flSW_max)')
     if nameVars_flZD:
         for nameVar_flZD in nameVars_flZD:
             exec(f'varZD , var{nameVar_flZD} = ZD_filter(varZD_raw , var{nameVar_flZD} , flZD_num)')
