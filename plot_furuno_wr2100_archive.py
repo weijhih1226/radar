@@ -3,137 +3,20 @@
 ########################################
 #### plot_furuno_wr2100_archive.py #####
 ######## Author: Wei-Jhih Chen #########
-######### Update: 2022/07/19 ###########
+######### Update: 2022/07/20 ###########
 ########################################
 
 import os , glob , time
 import numpy as np
 import datetime as dt
-import matplotlib.pyplot as plt
-import cfg.color as cfgc
 from filter import *
 from convert_grid import *
 from attenuation_correction import *
 from read_furuno_wr2100_archive import *
-from numpy.ma import masked_array as mama
+from plot_radar import *
+from plot_consistency import *
 from datetime import datetime as dtdt
-from matplotlib.colors import ListedColormap , BoundaryNorm , LogNorm
-from cartopy.feature import ShapelyFeature as shpft
 from scipy.interpolate import griddata as gd
-
-def plot_rhi(axis , XEEM , ZEEM , var , varInfo , staInfo , azi , datetimeStrLST , outPath):
-    ########## Grid ##########
-    xTick = np.arange(axis['xMin'] * 10 , axis['xMax'] * 10 + axis['xInt'] * 10 , axis['xInt'] * 10) / 10
-    zTick = np.arange(axis['zMin'] * 10 , axis['zMax'] * 10 + axis['zInt'] * 10 , axis['zInt'] * 10) / 10
-    ########## Color ##########
-    colors , levels , ticks , tickLabels , cmin , cmax = cfgc.colors(varInfo['name'] , 'X')
-    ########## Plot ##########
-    plt.close()
-    fig , ax = plt.subplots(figsize = [12 , 10])
-    ax.text(0.125 , 0.920 , staInfo['name'] , fontsize = 18 , ha = 'left' , color = '#666666' , transform = fig.transFigure)
-    ax.text(0.125 , 0.890 , varInfo['plotname'] , fontsize = 20 , ha = 'left' , transform = fig.transFigure)
-    ax.text(0.744 , 0.920 , f'Azi. {azi:.2f}$^o$ RHI' , fontsize = 18 , ha = 'right' , transform = fig.transFigure)
-    ax.text(0.744 , 0.890 , datetimeStrLST , fontsize = 20 , ha = 'right' , transform = fig.transFigure)
-    ax.axis([axis['xMin'] , axis['xMax'] , axis['zMin'] , axis['zMax']])
-    ax.scatter(0 , staInfo['alt'] , s = 250 , c = 'k' , marker = '^')
-    if azi >= 180:
-        ax.invert_xaxis()
-    plt.xticks(xTick , size = 10)
-    plt.yticks(zTick , size = 10)
-    plt.xlabel('Distance from Radar (km)')
-    plt.ylabel('altitudeitude (km)')
-    cmap = ListedColormap(colors)
-    norm = BoundaryNorm(levels , cmap.N)
-    PC = ax.pcolormesh(XEEM , ZEEM , var , shading = 'flat' , cmap = cmap , norm = norm , alpha = 1)
-    PC.set_clim(cmin , cmax)
-    ax.grid(visible = True , color = '#bbbbbb' , linewidth = .5 , alpha = .5 , zorder = 0)
-    cbar = plt.colorbar(PC , orientation = 'vertical' , ticks = ticks , extend = 'both')
-    cbar.ax.set_yticklabels(tickLabels)
-    cbar.ax.tick_params(labelsize = 12)
-    cbar.set_label(varInfo['units'] , size = 12)
-    fig.savefig(outPath , dpi = 200)
-    print(f"{outPath} - Done!")
-
-def plot_rhi_reorder(axis , XG , ZG , varXZ , varInfo , staInfo , azi , datetimeStrLST , outPath):
-    ########## Grid ##########
-    xTick = np.arange(axis['xMin'] * 10 , axis['xMax'] * 10 + axis['xInt'] * 10 , axis['xInt'] * 10) / 10
-    zTick = np.arange(axis['zMin'] * 10 , axis['zMax'] * 10 + axis['zInt'] * 10 , axis['zInt'] * 10) / 10
-    ########## Color ##########
-    colors , levels , ticks , tickLabels , cmin , cmax = cfgc.colors(varInfo['name'] , 'X')
-    ########## Plot ##########
-    plt.close()
-    fig , ax = plt.subplots(figsize = [12 , 10])
-    ax.text(0.125 , 0.920 , staInfo['name'] , fontsize = 18 , ha = 'left' , color = '#666666' , transform = fig.transFigure)
-    ax.text(0.125 , 0.890 , varInfo['plotname'] , fontsize = 20 , ha = 'left' , transform = fig.transFigure)
-    ax.text(0.744 , 0.920 , f'Azi. {azi:.2f}$^o$ RHI' , fontsize = 18 , ha = 'right' , transform = fig.transFigure)
-    ax.text(0.744 , 0.890 , datetimeStrLST , fontsize = 20 , ha = 'right' , transform = fig.transFigure)
-    ax.axis([axis['xMin'] , axis['xMax'] , axis['zMin'] , axis['zMax']])
-    ax.scatter(0 , staInfo['alt'] , s = 250 , c = 'k' , marker = '^')
-    if azi >= 180:
-        ax.invert_xaxis()
-    plt.xticks(xTick , size = 10)
-    plt.yticks(zTick , size = 10)
-    plt.xlabel('Distance from Radar (km)')
-    plt.ylabel('altitudeitude (km)')
-    cmap = ListedColormap(colors)
-    norm = BoundaryNorm(levels , cmap.N)
-    PC = ax.pcolormesh(XG , ZG , varXZ , shading = 'flat' , cmap = cmap , norm = norm , alpha = 1)
-    PC.set_clim(cmin , cmax)
-    ax.grid(visible = True , color = '#bbbbbb' , linewidth = .5 , alpha = .5 , zorder = 0)
-    cbar = plt.colorbar(PC , orientation = 'vertical' , ticks = ticks , extend = 'both')
-    cbar.ax.set_yticklabels(tickLabels)
-    cbar.ax.tick_params(labelsize = 12)
-    cbar.set_label(varInfo['units'] , size = 12)
-    fig.savefig(outPath , dpi = 200)
-    varXZ.tofile(f'{outPath[:-4]}.dat')
-    print(f"{outPath} - Done!")
-
-def plot_selfconsistency(axis , var1 , var2 , varPlot1 , varPlot2 , varUnits1 , varUnits2 , aziFix , datetimeStrLST , outPath):
-    ########## Grid ##########
-    xTick = np.arange(axis['xMin'] * 100 , (axis['xMax'] + axis['xInt']) * 100 , axis['xInt'] * 100) / 100
-    yTick = np.arange(axis['yMin'] * 100 , (axis['yMax'] + axis['yInt']) * 100 , axis['yInt'] * 100) / 100
-    bpWidths = (axis['xMax'] - axis['xMin']) / axis['xBin'] / 5
-    ########## Plot ##########
-    var1 = var1.reshape([-1])
-    var2 = var2.reshape([-1])
-    var1_fil = np.delete(var1 , (var1 < axis['xMin']) | (var1 >= axis['xMax']) | (var2 < axis['yMin']) | (var2 >= axis['yMax']))
-    var2_fil = np.delete(var2 , (var1 < axis['xMin']) | (var1 >= axis['xMax']) | (var2 < axis['yMin']) | (var2 >= axis['yMax']))
-    plt.close()
-    fig , ax = plt.subplots(figsize = [12 , 10])
-    ax.text(0.125 , 0.920 , 'NTU' , fontsize = 20 , ha = 'left' , transform = fig.transFigure)
-    ax.text(0.125 , 0.890 , 'X band' , fontsize = 20 , ha = 'left' , transform = fig.transFigure)
-    ax.text(0.744 , 0.920 , f'Azi. {aziFix:03.1f}$^o$ RHI' , fontsize = 20 , ha = 'right' , transform = fig.transFigure)
-    ax.text(0.744 , 0.890 , datetimeStrLST , fontsize = 20 , ha = 'right' , transform = fig.transFigure)
-    # ax.plot([0 , 6] , [0.8 , 0.8] , c = 'k' , linewidth = 2 , alpha = 1 , zorder = 2)
-    # ax.plot([6 , 6] , [0.8 , 1] , c = 'k' , linewidth = 2 , alpha = 1 , zorder = 2)
-    # ax.plot([0 , 6] , [1 , 1] , c = 'k' , linewidth = 2 , alpha = 1 , zorder = 2)
-    # ax.plot([0 , 0] , [0.8 , 1] , c = 'k' , linewidth = 2 , alpha = 1 , zorder = 2)
-    H2D = plt.hist2d(var1 , var2 , bins = [axis['xBin'] , axis['yBin']] , range = [[axis['xMin'] , axis['xMax']] , [axis['yMin'] , axis['yMax']]] , cmap = 'hot_r' , norm = LogNorm(vmin = 1) , zorder = 0)[0]
-    num_x , num_y = H2D.shape
-    for cnt_x in np.arange(0 , num_x):
-        # bp = []
-        # for cnt_y in np.arange(0 , num_y):
-        #     bp0 = np.ones([int(H2D[cnt_x , cnt_y])]) * (axis['yMin'] + (axis['yMax'] - axis['yMin']) / axis['yBin'] * (cnt_y + 0.5))
-        #     bp = np.append(bp , bp0)
-        bp = var2_fil[(var1_fil >= axis['xMin'] + (axis['xMax'] - axis['xMin']) / axis['xBin'] * cnt_x) & (var1_fil < axis['xMin'] + (axis['xMax'] - axis['xMin']) / axis['xBin'] * (cnt_x + 1))]
-        BP = plt.boxplot(bp , positions = [axis['xMin'] + (axis['xMax'] - axis['xMin']) / axis['xBin'] * (cnt_x + 0.5)] , widths = bpWidths , manage_ticks = False , patch_artist = True , showfliers = False , zorder = 2)
-        BP['boxes'][0].set(color = '#444444' , linewidth = 1)
-        BP['boxes'][0].set(facecolor = '#444444')
-        BP['medians'][0].set(color = 'k')
-        BP['whiskers'][0].set(color = '#444444')
-        BP['whiskers'][1].set(color = '#444444')
-        BP['caps'][0].set(color = '#444444')
-        BP['caps'][1].set(color = '#444444')
-    ax.axis([axis['xMin'] , axis['xMax'] , axis['yMin'] , axis['yMax']])
-    ax.grid(visible = True , c = '#bbbbbb' , linewidth = .5 , alpha = .5 , zorder = 1)
-    cbar = plt.colorbar(orientation = 'vertical' , extend = 'max')
-    cbar.ax.tick_params(labelsize = 12)
-    plt.xticks(xTick , size = 12)
-    plt.yticks(yTick , size = 12)
-    plt.xlabel(f'{varPlot1} ({varUnits1})' , fontsize = 18)
-    plt.ylabel(f'{varPlot2} ({varUnits2})' , fontsize = 18)
-    fig.savefig(outPath , dpi = 200)
-    print(f"{outPath} - Done!")
 
 def main():
     ########## Case Setting ##########
@@ -340,8 +223,8 @@ def main():
 
             # axis_rhi = {'xMin' : 0 , 'xMax' : 40 , 'xInt' : 5 , 'zMin' : 0 , 'zMax' : 20 , 'zInt' : 1}
             axis_rhi = {'xMin' : xMin , 'xMax' : xMax , 'xInt' : 5 , 'zMin' : zMin , 'zMax' : zMax , 'zInt' : 1}
-            plot_rhi(axis_rhi , DisEEM_G , HgtEEM_G , var , varInfo , staInfo , aziFix , datetimeStrLST , outPath)
-            plot_rhi_reorder(axis_rhi , XG , ZG , varXZ , varInfo , staInfo , aziFix , datetimeStrLST , outPath2)
+            plot_rhi(axis_rhi , DisEEM_G , HgtEEM_G , var , varInfo , staInfo , aziFix , datetimeStrLST , outPath , 'X')
+            plot_rhi_reorder(axis_rhi , XG , ZG , varXZ , varInfo , staInfo , aziFix , datetimeStrLST , outPath2 , 'X')
 
         outPath3 = f'{outDir3}{var_name[1]}_{var_name[4]}_{dateStrLST}_{timeStrLST}_{aziFix * 10:04.0f}.png'
         axis_sc = {'xMin' : 0 , 'xMax' : 6 , 'xInt' : 1 , 'xBin' : 12 , 'yMin' : 0.8 , 'yMax' : 1 , 'yInt' : 0.02 , 'yBin' : 20}

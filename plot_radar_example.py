@@ -1,11 +1,14 @@
 #!/home/C.cwj/anaconda3/envs/pyart_env/bin/python3
 
+########################################
+######## plot_radar_example.py #########
+######## Author: Wei-Jhih Chen #########
+######### Update: 2022/07/20 ###########
+########################################
+
 import netCDF4 as nc
 import cartopy.crs as ccrs
-import pyart as pa
 import numpy as np
-import datetime as dt
-import matplotlib
 import matplotlib.pyplot as plt
 from cartopy.io.shapereader import Reader as shprd
 from cartopy.feature import ShapelyFeature as shpft

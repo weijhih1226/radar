@@ -1,17 +1,62 @@
 ########################################
 ######### plot_consistency.py ##########
 ######## Author: Wei-Jhih Chen #########
-######### Update: 2022/06/09 ###########
+######### Update: 2022/07/20 ###########
 ########################################
 
 import matplotlib
 import numpy as np
-import datetime as dt
 import matplotlib.pyplot as plt
-import datetime as dt
-from numpy.ma import masked_array as mama
 from datetime import datetime as dtdt
 from sklearn.linear_model import LinearRegression
+from matplotlib.colors import LogNorm
+
+def plot_selfconsistency(axis , var1 , var2 , varPlot1 , varPlot2 , varUnits1 , varUnits2 , aziFix , datetimeStrLST , outPath):
+    ########## Grid ##########
+    xTick = np.arange(axis['xMin'] * 100 , (axis['xMax'] + axis['xInt']) * 100 , axis['xInt'] * 100) / 100
+    yTick = np.arange(axis['yMin'] * 100 , (axis['yMax'] + axis['yInt']) * 100 , axis['yInt'] * 100) / 100
+    bpWidths = (axis['xMax'] - axis['xMin']) / axis['xBin'] / 5
+    ########## Plot ##########
+    var1 = var1.reshape([-1])
+    var2 = var2.reshape([-1])
+    var1_fil = np.delete(var1 , (var1 < axis['xMin']) | (var1 >= axis['xMax']) | (var2 < axis['yMin']) | (var2 >= axis['yMax']))
+    var2_fil = np.delete(var2 , (var1 < axis['xMin']) | (var1 >= axis['xMax']) | (var2 < axis['yMin']) | (var2 >= axis['yMax']))
+    plt.close()
+    fig , ax = plt.subplots(figsize = [12 , 10])
+    ax.text(0.125 , 0.920 , 'NTU' , fontsize = 20 , ha = 'left' , transform = fig.transFigure)
+    ax.text(0.125 , 0.890 , 'X band' , fontsize = 20 , ha = 'left' , transform = fig.transFigure)
+    ax.text(0.744 , 0.920 , f'Azi. {aziFix:03.1f}$^o$ RHI' , fontsize = 20 , ha = 'right' , transform = fig.transFigure)
+    ax.text(0.744 , 0.890 , datetimeStrLST , fontsize = 20 , ha = 'right' , transform = fig.transFigure)
+    # ax.plot([0 , 6] , [0.8 , 0.8] , c = 'k' , linewidth = 2 , alpha = 1 , zorder = 2)
+    # ax.plot([6 , 6] , [0.8 , 1] , c = 'k' , linewidth = 2 , alpha = 1 , zorder = 2)
+    # ax.plot([0 , 6] , [1 , 1] , c = 'k' , linewidth = 2 , alpha = 1 , zorder = 2)
+    # ax.plot([0 , 0] , [0.8 , 1] , c = 'k' , linewidth = 2 , alpha = 1 , zorder = 2)
+    H2D = plt.hist2d(var1 , var2 , bins = [axis['xBin'] , axis['yBin']] , range = [[axis['xMin'] , axis['xMax']] , [axis['yMin'] , axis['yMax']]] , cmap = 'hot_r' , norm = LogNorm(vmin = 1) , zorder = 0)[0]
+    num_x , num_y = H2D.shape
+    for cnt_x in np.arange(0 , num_x):
+        # bp = []
+        # for cnt_y in np.arange(0 , num_y):
+        #     bp0 = np.ones([int(H2D[cnt_x , cnt_y])]) * (axis['yMin'] + (axis['yMax'] - axis['yMin']) / axis['yBin'] * (cnt_y + 0.5))
+        #     bp = np.append(bp , bp0)
+        bp = var2_fil[(var1_fil >= axis['xMin'] + (axis['xMax'] - axis['xMin']) / axis['xBin'] * cnt_x) & (var1_fil < axis['xMin'] + (axis['xMax'] - axis['xMin']) / axis['xBin'] * (cnt_x + 1))]
+        BP = plt.boxplot(bp , positions = [axis['xMin'] + (axis['xMax'] - axis['xMin']) / axis['xBin'] * (cnt_x + 0.5)] , widths = bpWidths , manage_ticks = False , patch_artist = True , showfliers = False , zorder = 2)
+        BP['boxes'][0].set(color = '#444444' , linewidth = 1)
+        BP['boxes'][0].set(facecolor = '#444444')
+        BP['medians'][0].set(color = 'k')
+        BP['whiskers'][0].set(color = '#444444')
+        BP['whiskers'][1].set(color = '#444444')
+        BP['caps'][0].set(color = '#444444')
+        BP['caps'][1].set(color = '#444444')
+    ax.axis([axis['xMin'] , axis['xMax'] , axis['yMin'] , axis['yMax']])
+    ax.grid(visible = True , c = '#bbbbbb' , linewidth = .5 , alpha = .5 , zorder = 1)
+    cbar = plt.colorbar(orientation = 'vertical' , extend = 'max')
+    cbar.ax.tick_params(labelsize = 12)
+    plt.xticks(xTick , size = 12)
+    plt.yticks(yTick , size = 12)
+    plt.xlabel(f'{varPlot1} ({varUnits1})' , fontsize = 18)
+    plt.ylabel(f'{varPlot2} ({varUnits2})' , fontsize = 18)
+    fig.savefig(outPath , dpi = 200)
+    print(f"{outPath} - Done!")
 
 case_date = '20200716'
 case_time1 = ['123932' , '124529' , '125126' , '125723' , '130321']
