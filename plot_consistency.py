@@ -1,7 +1,7 @@
 ########################################
 ######### plot_consistency.py ##########
 ######## Author: Wei-Jhih Chen #########
-######### Update: 2022/07/20 ###########
+######### Update: 2022/10/30 ###########
 ########################################
 
 import matplotlib
@@ -11,27 +11,28 @@ from datetime import datetime as dtdt
 from sklearn.linear_model import LinearRegression
 from matplotlib.colors import LogNorm
 
-def plot_selfconsistency(axis , var1 , var2 , varPlot1 , varPlot2 , varUnits1 , varUnits2 , aziFix , datetimeStrLST , outPath):
+def plot_selfconsistency(axis , var1 , var2 , aziFix , datetimeLST , outDir):
+    OUTPATH = outDir/f"{var1['name']}_{var2['name']}_{dtdt.strftime(datetimeLST , '%Y%m%d_%H%M%S')}_{aziFix * 10:04.0f}.png"
     ########## Grid ##########
     xTick = np.arange(axis['xMin'] * 100 , (axis['xMax'] + axis['xInt']) * 100 , axis['xInt'] * 100) / 100
     yTick = np.arange(axis['yMin'] * 100 , (axis['yMax'] + axis['yInt']) * 100 , axis['yInt'] * 100) / 100
     bpWidths = (axis['xMax'] - axis['xMin']) / axis['xBin'] / 5
     ########## Plot ##########
-    var1 = var1.reshape([-1])
-    var2 = var2.reshape([-1])
-    var1_fil = np.delete(var1 , (var1 < axis['xMin']) | (var1 >= axis['xMax']) | (var2 < axis['yMin']) | (var2 >= axis['yMax']))
-    var2_fil = np.delete(var2 , (var1 < axis['xMin']) | (var1 >= axis['xMax']) | (var2 < axis['yMin']) | (var2 >= axis['yMax']))
+    var1['data'] = var1['data'].reshape([-1])
+    var2['data'] = var2['data'].reshape([-1])
+    var1_fil = np.delete(var1['data'] , (var1['data'] < axis['xMin']) | (var1['data'] >= axis['xMax']) | (var2['data'] < axis['yMin']) | (var2['data'] >= axis['yMax']))
+    var2_fil = np.delete(var2['data'] , (var1['data'] < axis['xMin']) | (var1['data'] >= axis['xMax']) | (var2['data'] < axis['yMin']) | (var2['data'] >= axis['yMax']))
     plt.close()
     fig , ax = plt.subplots(figsize = [12 , 10])
     ax.text(0.125 , 0.920 , 'NTU' , fontsize = 20 , ha = 'left' , transform = fig.transFigure)
     ax.text(0.125 , 0.890 , 'X band' , fontsize = 20 , ha = 'left' , transform = fig.transFigure)
     ax.text(0.744 , 0.920 , f'Azi. {aziFix:03.1f}$^o$ RHI' , fontsize = 20 , ha = 'right' , transform = fig.transFigure)
-    ax.text(0.744 , 0.890 , datetimeStrLST , fontsize = 20 , ha = 'right' , transform = fig.transFigure)
+    ax.text(0.744 , 0.890 , dtdt.strftime(datetimeLST , '%Y/%m/%d %H:%M:%S LST') , fontsize = 20 , ha = 'right' , transform = fig.transFigure)
     # ax.plot([0 , 6] , [0.8 , 0.8] , c = 'k' , linewidth = 2 , alpha = 1 , zorder = 2)
     # ax.plot([6 , 6] , [0.8 , 1] , c = 'k' , linewidth = 2 , alpha = 1 , zorder = 2)
     # ax.plot([0 , 6] , [1 , 1] , c = 'k' , linewidth = 2 , alpha = 1 , zorder = 2)
     # ax.plot([0 , 0] , [0.8 , 1] , c = 'k' , linewidth = 2 , alpha = 1 , zorder = 2)
-    H2D = plt.hist2d(var1 , var2 , bins = [axis['xBin'] , axis['yBin']] , range = [[axis['xMin'] , axis['xMax']] , [axis['yMin'] , axis['yMax']]] , cmap = 'hot_r' , norm = LogNorm(vmin = 1) , zorder = 0)[0]
+    H2D = plt.hist2d(var1['data'] , var2['data'] , bins = [axis['xBin'] , axis['yBin']] , range = [[axis['xMin'] , axis['xMax']] , [axis['yMin'] , axis['yMax']]] , cmap = 'hot_r' , norm = LogNorm(vmin = 1) , zorder = 0)[0]
     num_x , num_y = H2D.shape
     for cnt_x in np.arange(0 , num_x):
         # bp = []
@@ -53,10 +54,10 @@ def plot_selfconsistency(axis , var1 , var2 , varPlot1 , varPlot2 , varUnits1 , 
     cbar.ax.tick_params(labelsize = 12)
     plt.xticks(xTick , size = 12)
     plt.yticks(yTick , size = 12)
-    plt.xlabel(f'{varPlot1} ({varUnits1})' , fontsize = 18)
-    plt.ylabel(f'{varPlot2} ({varUnits2})' , fontsize = 18)
-    fig.savefig(outPath , dpi = 200)
-    print(f"{outPath} - Done!")
+    plt.xlabel(f"{var1['plotname']} ({var1['units']})" , fontsize = 18)
+    plt.ylabel(f"{var2['plotname']} ({var2['units']})" , fontsize = 18)
+    fig.savefig(OUTPATH , dpi = 200)
+    print(f'{OUTPATH} - Done!')
 
 case_date = '20200716'
 case_time1 = ['123932' , '124529' , '125126' , '125723' , '130321']

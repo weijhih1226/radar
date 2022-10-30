@@ -1,7 +1,7 @@
 ########################################
 #### read_furuno_wr2100_archive.py #####
 ######## Author: Wei-Jhih Chen #########
-######### Update: 2022/05/31 ###########
+######### Update: 2022/10/29 ###########
 ########################################
 
 import gzip
@@ -14,15 +14,15 @@ def read_rhi(inPath):
     instrument_name = 'FURUNO WR-2100'  # Instrument Name
     data_type = 'binary'
     
-    if inPath[-3:] == '.gz':
-        scan_type = inPath[-6:-3]
-        sweep_number = {'data': [int(inPath[-10:-7])]}
-        sweep_mode = {'data': [inPath[-6:-3]]}
+    if str(inPath)[-3:] == '.gz':
+        scan_type = str(inPath)[-6:-3]
+        sweep_number = {'data': [int(str(inPath)[-10:-7])]}
+        sweep_mode = {'data': [scan_type]}
         file = gzip.open(inPath , 'rb')
     else:
-        scan_type = inPath[-3:]
-        sweep_number = {'data': [int(inPath[-7:-4])]}
-        sweep_mode = {'data': [inPath[-3:]]}
+        scan_type = str(inPath)[-3:]
+        sweep_number = {'data': [int(str(inPath)[-7:-4])]}
+        sweep_mode = {'data': [scan_type]}
         file = open(inPath , 'rb')
 
     data = file.read()
@@ -253,6 +253,10 @@ def read_rhi(inPath):
     fixed_angle = {'data': fixed_angle}
     azimuth = {'data': azimuth}
     elevation = {'data': elevation}
+    if tx_pulse_specification == 1 or tx_pulse_specification == 2 or tx_pulse_specification == 3:       pulse_width = 50        # us (Q0N , long)
+    elif tx_pulse_specification == 4 or tx_pulse_specification == 7:                                    pulse_width = 0.5       # us (P0N , short)
+    elif tx_pulse_specification == 5 or tx_pulse_specification == 8:                                    pulse_width = 0.66      # us (P0N , short)
+    elif tx_pulse_specification == 6 or tx_pulse_specification == 9 or tx_pulse_specification == 10:    pulse_width = 1         # us (P0N , short)
     instrument_parameters = {'antenna_rotation_speed_azimuth': antenna_rotation_speed_azimuth , 
                              'prf1': prf1 , 'prf2': prf2 , 
                              'noise_level_pulse_modulation_H': noise_level_pulse_modulation_H , 
@@ -261,6 +265,7 @@ def read_rhi(inPath):
                              'Tx_pulse_specification': tx_pulse_specification , 
                              'radar_constant_H': radar_constant_H , 
                              'radar_constant_V': radar_constant_V , 
+                             'pulse_width': pulse_width , 
                              }
 
     return (datetime , range , fields , metadata , scan_type , 

@@ -1,21 +1,27 @@
 ########################################
 ########### convert_grid.py ############
 ######## Author: Wei-Jhih Chen #########
-######### Update: 2022/07/19 ###########
+######### Update: 2022/10/30 ###########
 ########################################
 
 import numpy as np
 
-def equivalent_earth_model(elevation , altitude , range):
-    # elevation: Angle of Elevation (Units: degree)
-    # altitude: Altitude of Station (Units: km)
-    # range: Range (Units: km)
-    a = 6371.25                             # Units: km
-    k_e = 4 / 3
-    theta_e_degree = elevation              # Units: degree
-    theta_e = theta_e_degree / 180 * np.pi  # Units: radius
-    hgtEEM = (range ** 2 + (k_e * a) ** 2 + 2 * range * k_e * a * np.sin(theta_e)) ** 0.5 - k_e * a + altitude
-    disEEM = k_e * a * np.arcsin(range * np.cos(theta_e) / (k_e * a + hgtEEM))
+def equivalent_earth_model(ele , alt , rngs):
+    # ele: Angle of Elevation (Units: degree)
+    # alt: Altitude of Station (Units: km)
+    # rngs: Range (Units: km)
+    R = 6371.25                             # Radius of The Earth (Units: km)
+    K_E = 4 / 3
+    ele = ele / 180 * np.pi     # Units: degree to radius
+    hgtEEM = (rngs ** 2 + (K_E * R) ** 2 + 2 * rngs * K_E * R * np.sin(ele)) ** 0.5 - K_E * R + alt
+    disEEM = K_E * R * np.arcsin(rngs * np.cos(ele) / (K_E * R + hgtEEM))
+    return disEEM , hgtEEM
+
+def equivalent_earth_model_by_elevations(eles , alt , rngs):
+    disEEM = np.empty([len(eles) , len(rngs)])
+    hgtEEM = np.empty([len(eles) , len(rngs)])
+    for cnt_ele in range(len(eles)):
+        disEEM[cnt_ele] , hgtEEM[cnt_ele] = equivalent_earth_model(eles[cnt_ele] , alt , rngs)
     return disEEM , hgtEEM
 
 def polar_to_lonlat(azi , disEEM , hgtEEM , longitude , latitude):
