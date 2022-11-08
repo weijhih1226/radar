@@ -62,7 +62,7 @@ def attenuation_correction(Zh , Zdr , Kdp , delta_r , b1 , b2 , d1 , d2):
         Zdr[: , cnt_rng] += 2 * Adp * delta_r
     return Zh , Zdr
 
-def attenuation_correction_C(varZH , varZD , varKD , delta_r):
+def attenuation_correction_C(Zh , Zdr , Kdp , delta_r):
     ''' Attenuation correction of C band refer to Bringi et al. 1990 (B90).
 
     b1: 0.08
@@ -88,12 +88,12 @@ def attenuation_correction_C(varZH , varZD , varKD , delta_r):
     b2 = 1
     d1 = 0.009
     d2 = 1
-    return attenuation_correction(varZH , varZD , varKD , delta_r , b1 , b2 , d1 , d2)
+    return attenuation_correction(Zh , Zdr , Kdp , delta_r , b1 , b2 , d1 , d2)
 
 
-def attenuation_correction_X(varZH , varZD , varKD , delta_r):
+def attenuation_correction_X(Zh , Zdr , Kdp , delta_r):
     ''' Attenuation correction of X band refer to FURUNO WR2100.
-    
+
     b1: 0.233
     b2: 1.02
     d1: 0.0298
@@ -117,4 +117,4 @@ def attenuation_correction_X(varZH , varZD , varKD , delta_r):
     b2 = 1.02
     d1 = 0.0298
     d2 = 1.293
-    return attenuation_correction(varZH , varZD , varKD , delta_r , b1 , b2 , d1 , d2)
+    return attenuation_correction(Zh , Zdr , Kdp , delta_r , b1 , b2 , d1 , d2)
