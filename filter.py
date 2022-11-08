@@ -1,54 +1,99 @@
 ########################################
 ############## filter.py ###############
 ######## Author: Wei-Jhih Chen #########
-######### Update: 2022/07/19 ###########
+######### Update: 2022/11/08 ###########
 ########################################
 
 import numpy as np
-from numpy.ma import masked_array as mama
+import numpy.ma as ma
 
-def var_filter(filVar , inVar , flMin , flMax):
-    if flMin == None and flMax == None:
-        outVar = inVar
-    elif flMin == None:
-        outVar = mama(inVar , filVar > flMax)
-    elif flMax == None:
-        outVar = mama(inVar , filVar < flMin)
+def var_filter(filVar , var , filMin , filMax):
+    ''' General function for one variable to be masked by other variable 
+    which exceed the range between the setting maximum and minimum.
+
+    --------------------
+    Args:
+        filVar: numpy.ndarray
+            the variable for "var" to be masked
+        var: numpy.ndarray
+            the variable masked by "filVar"
+        filMin: float
+            the lower bound of "filVar" allowed not to mask "var"
+        filMax: float
+            the higher bound of "filVar" allowed not to mask "var"
+    
+    --------------------
+    Returns:
+        var: numpy.ndarray (After be masked)
+    '''
+    if filMin is None and filMax is None:
+        return var
+    elif filMin is None:
+        return ma.array(var , mask = filVar > filMax , copy = False)
+    elif filMax is None:
+        return ma.array(var , mask = filVar < filMin , copy = False)
     else:
-        outVar = mama(inVar , (filVar < flMin) | (filVar > flMax))
-    return outVar
+        return ma.array(var , mask = (filVar < filMin) | (filVar > filMax) , copy = False)
 
-def ZD_filter(varZD , var , flNum):
-    num_azi = np.size(varZD , 0)
-    num_rng = np.size(varZD , 1)
-    varZD = varZD.filled(fill_value = np.nan)
-    varSmZD = np.empty([num_azi , num_rng])
-    varSmZD.fill(np.nan)
-    for cnt_azi in np.arange(0 , num_azi):
-        for cnt_rng in np.arange(0 , num_rng - (flNum - 1)):
-            varSmZD[cnt_azi , cnt_rng + int((flNum - 1) / 2)] = np.mean(varZD[cnt_azi][cnt_rng : cnt_rng + (flNum - 1)])
-    varZD_DV = varZD - varSmZD
-    varZD_SdDV = np.nanstd(varZD_DV)
-    varZD[np.isnan(varSmZD)] = np.nan
-    var[np.isnan(varSmZD)] = np.nan
-    varZD[np.abs(varZD_DV) > varZD_SdDV] = np.nan
-    var[np.abs(varZD_DV) > varZD_SdDV] = np.nan
-    return varZD , var
+def ZD_filter(Zdr , var , filNum):
+    ''' Use deviations of Zdr to filter other variables
 
-def KD_filter(varPH , range , smNum):
-    num_azi = np.size(varPH , 0)
-    num_rng = np.size(varPH , 1)
-    varPH = varPH.filled(fill_value = np.nan)
-    varSmPH = np.empty([num_azi , num_rng])
-    varSmPH.fill(np.nan)
-    varKD = np.empty([num_azi , num_rng])
-    varKD.fill(np.nan)
-    for cnt_azi in np.arange(0 , num_azi):
-        for cnt_rng in np.arange(0 , num_rng - 1):
-            if varPH[cnt_azi , cnt_rng + 1] - varPH[cnt_azi , cnt_rng] < -180:
-                varPH[cnt_azi , cnt_rng + 1 : ] = varPH[cnt_azi , cnt_rng + 1 : ] + 360
-        for cnt_rng in np.arange(0 , num_rng - (smNum - 1)):
-            varSmPH[cnt_azi , cnt_rng + int((smNum - 1) / 2)] = np.nanmean(varPH[cnt_azi , cnt_rng : cnt_rng + (smNum - 1)])
-    for cnt_rng in np.arange(0 , num_rng - 1):
-        varKD[: , cnt_rng] = (varSmPH[: , cnt_rng + 1] - varSmPH[: , cnt_rng]) / (range[cnt_rng + 1] - range[cnt_rng]) / 2
-    return varKD
+    --------------------
+    Args:
+        Zdr: numpy.ndarray
+            (Shape: azimuth * range)
+        var: numpy.ndarray
+            the variable masked by "Zdr" (Shape: azimuth * range)
+        filNum: int (odd)
+            the number for calculating the deviation of Zdr
+
+    --------------------
+    Returns:
+        Zdr: numpy.ndarray (After be masked)
+        var: numpy.ndarray (After be masked)
+    '''
+    num_azi , num_rng = Zdr.shape
+    Zdr = Zdr.filled(np.nan)
+    SmZdr = np.empty((num_azi , num_rng))
+    SmZdr.fill(np.nan)
+    for cnt_rng in range(num_rng - (filNum - 1)):
+        SmZdr[: , cnt_rng + int((filNum - 1) / 2)] = np.mean(Zdr[: , cnt_rng : cnt_rng + (filNum - 1)] , axis = 1)
+    Zdr_DV = Zdr - SmZdr
+    Zdr_SdDV = np.nanstd(Zdr_DV)
+    Zdr[np.isnan(SmZdr)] = np.nan
+    var[np.isnan(SmZdr)] = np.nan
+    Zdr[np.abs(Zdr_DV) > Zdr_SdDV] = np.nan
+    var[np.abs(Zdr_DV) > Zdr_SdDV] = np.nan
+    return Zdr , var
+
+def KD_filter(Phidp , rng , smNum):
+    ''' Calculate from Phidp to Kdp
+
+    --------------------
+    Args:
+        Phidp: numpy.ndarray
+            (Shape: azimuth * range)
+        rng: numpy.ndarray
+            radar range (Shape: range)
+        smNum: int (odd)
+            the number for smoothing Phidp
+
+    --------------------
+    Returns:
+        Kdp: numpy.ndarray
+    '''
+    num_azi , num_rng = Phidp.shape
+    Phidp = Phidp.filled(np.nan)
+    SmPhidp = np.empty((num_azi , num_rng))
+    Kdp = np.empty((num_azi , num_rng))
+    SmPhidp.fill(np.nan)
+    Kdp.fill(np.nan)
+    for cnt_azi in range(num_azi):
+        for cnt_rng in range(num_rng - 1):
+            if Phidp[cnt_azi , cnt_rng + 1] - Phidp[cnt_azi , cnt_rng] < -180:
+                Phidp[cnt_azi , cnt_rng + 1 : ] = Phidp[cnt_azi , cnt_rng + 1 : ] + 360
+        for cnt_rng in range(num_rng - (smNum - 1)):
+            SmPhidp[cnt_azi , cnt_rng + int((smNum - 1) / 2)] = np.nanmean(Phidp[cnt_azi , cnt_rng : cnt_rng + (smNum - 1)])
+    for cnt_rng in range(num_rng - 1):
+        Kdp[: , cnt_rng] = (SmPhidp[: , cnt_rng + 1] - SmPhidp[: , cnt_rng]) / (rng[cnt_rng + 1] - rng[cnt_rng]) / 2
+    return Kdp
