@@ -4,6 +4,20 @@
 ######### Update: 2022/11/08 ###########
 ########################################
 
+''' Filter tools
+--------------------
+Kdp method:
+--------------------
+Kdp(i) = d(Phidp(i)) / 2dr
+
+--------------------
+Functions:
+--------------------
+- var_filter(filVar , var , filMin , filMax)
+- Zdr_filter(Zdr , var , filNum)
+- Kdp_filter(Phidp , rng , smNum)
+'''
+
 import numpy as np
 import numpy.ma as ma
 
@@ -35,7 +49,7 @@ def var_filter(filVar , var , filMin , filMax):
     else:
         return ma.array(var , mask = (filVar < filMin) | (filVar > filMax) , copy = False)
 
-def ZD_filter(Zdr , var , filNum):
+def Zdr_filter(Zdr , var , filNum):
     ''' Use deviations of Zdr to filter other variables
 
     --------------------
@@ -66,7 +80,7 @@ def ZD_filter(Zdr , var , filNum):
     var[np.abs(Zdr_DV) > Zdr_SdDV] = np.nan
     return Zdr , var
 
-def KD_filter(Phidp , rng , smNum):
+def Kdp_filter(Phidp , rng , smNum):
     ''' Calculate from Phidp to Kdp
 
     --------------------
