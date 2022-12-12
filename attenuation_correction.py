@@ -1,7 +1,7 @@
 ########################################
 ###### attenuation_correction.py #######
 ######## Author: Wei-Jhih Chen #########
-######### Update: 2022/11/08 ###########
+######### Update: 2022/11/11 ###########
 ########################################
 
 ''' Calculate corrected values by the attenuation effect
@@ -21,10 +21,13 @@ Functions:
 - attenuation_correction_X(Zh , Zdr , Kdp , dr) (for X band)
 '''
 
+import copy as cp
 import numpy as np
 from numpy.ma import masked_array as mama
+from typing import Tuple
 
-def attenuation_correction(Zh , Zdr , Kdp , delta_r , b1 , b2 , d1 , d2):
+def attenuation_correction(Zh: np.ndarray , Zdr: np.ndarray , Kdp: np.ndarray , delta_r: float , 
+                           b1: float , b2: float , d1: float , d2: float) -> Tuple[np.ndarray, np.ndarray]:
     ''' Attenuation correction by customized parameters: b1 , b2 , d1 , d2
 
     You can input parameters by yourself, or use attenuation_correction_C or
@@ -48,21 +51,33 @@ def attenuation_correction(Zh , Zdr , Kdp , delta_r , b1 , b2 , d1 , d2):
 
     --------------------
     Returns:
-        Zh: numpy.ndarray (After correction)
-        Zdr: numpy.ndarray (After correction)
+        Zh_AC: numpy.ndarray (After correction)
+        Zdr_AC: numpy.ndarray (After correction)
     '''
-    num_azi , num_rng = Zh.shape
-    Ah = np.zeros(num_azi)
-    Adp = np.zeros(num_azi)
+    shp = Zh.shape
+    num_rng = shp[-1]
+    Zh = Zh.reshape((-1 , num_rng))
+    Zdr = Zdr.reshape((-1 , num_rng))
+    Kdp = Kdp.reshape((-1 , num_rng))
+    num_ray = Zh.shape[0]
+    Ah = np.zeros(num_ray)
+    Adp = np.zeros(num_ray)
+    Zh_AC = cp.copy(Zh)
+    Zdr_AC = cp.copy(Zdr)
+    
     Kdp = mama(Kdp , Kdp < 0)
     for cnt_rng in range(num_rng):
         Ah += b1 * Kdp[: , cnt_rng] ** b2
         Adp += d1 * Kdp[: , cnt_rng] ** d2
-        Zh[: , cnt_rng] += 2 * Ah * delta_r
-        Zdr[: , cnt_rng] += 2 * Adp * delta_r
-    return Zh , Zdr
+        Zh_AC[: , cnt_rng] += 2 * Ah * delta_r
+        Zdr_AC[: , cnt_rng] += 2 * Adp * delta_r
 
-def attenuation_correction_C(Zh , Zdr , Kdp , delta_r):
+    Zh_AC = Zh_AC.reshape(shp)
+    Zdr_AC = Zdr_AC.reshape(shp)
+    return Zh_AC , Zdr_AC
+
+def attenuation_correction_C(Zh: np.ndarray , Zdr: np.ndarray , Kdp: np.ndarray , 
+                             delta_r: float) -> Tuple[np.ndarray, np.ndarray]:
     ''' Attenuation correction of C band refer to Bringi et al. 1990 (B90).
 
     b1: 0.08
@@ -91,7 +106,8 @@ def attenuation_correction_C(Zh , Zdr , Kdp , delta_r):
     return attenuation_correction(Zh , Zdr , Kdp , delta_r , b1 , b2 , d1 , d2)
 
 
-def attenuation_correction_X(Zh , Zdr , Kdp , delta_r):
+def attenuation_correction_X(Zh: np.ndarray , Zdr: np.ndarray , Kdp: np.ndarray , 
+                             delta_r: float) -> Tuple[np.ndarray, np.ndarray]:
     ''' Attenuation correction of X band refer to FURUNO WR2100.
 
     b1: 0.233
