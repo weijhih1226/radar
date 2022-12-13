@@ -1,33 +1,36 @@
 ########################################
 ############ plot_radar.py #############
 ######## Author: Wei-Jhih Chen #########
-######### Update: 2022/11/20 ###########
+######### Update: 2022/12/12 ###########
 ########################################
 
 import cfg.color as cfgc
 import numpy as np
 import matplotlib.pyplot as plt
+from pathlib import Path
 from datetime import datetime as dtdt
 from matplotlib.colors import ListedColormap , BoundaryNorm
 
-def make_dirs(dirPaths):
-    def make_dir(dirPath):
-        if not(dirPath.is_dir()):
-            dirPath.mkdir(parents = True)
-            print(f'Create Directory: {dirPath}')
+def make_dir(dirPath):
+    if not isinstance(dirPath , Path):
+        dirPath = Path(dirPath)
+    if not dirPath.is_dir():
+        dirPath.mkdir(parents = True)
+        print(f'Create Directory: {dirPath}')
 
-    if isinstance(dirPaths , list):
-        for dirPath in dirPaths:
-            make_dir(dirPath)
-    else:
-        make_dir(dirPaths)
+def make_dirs(*dirPaths):
+    if isinstance(dirPaths[0] , list):
+        dirPaths = dirPaths[0]
+    for dirPath in dirPaths:
+        make_dir(dirPath)
 
-def plot_ppi(axis , Lon , Lat , var , staInfo , eleFix , datetimeLST , shpPath , matPath , outDir):
+def plot_ppi(axis , Lon , Lat , var , staInfo , eleFix , datetimeLST , shpPath , matPath , outDir , band = 'S'):
     import cartopy.crs as ccrs
     from scipy import io
     from cartopy.io.shapereader import Reader as shprd
     from cartopy.feature import ShapelyFeature as shpft
 
+    make_dir(outDir)
     OUTPATH = outDir/f"{var['name']}_{dtdt.strftime(datetimeLST , '%Y%m%d_%H%M%S')}_{eleFix * 10:04.0f}.png"
     ########## Grid ##########
     X = np.arange(axis['xMin'] * 10 , axis['xMax'] * 10 + axis['xInt'] * 10 , axis['xInt'] * 10) / 10
@@ -39,7 +42,7 @@ def plot_ppi(axis , Lon , Lat , var , staInfo , eleFix , datetimeLST , shpPath ,
     for cnt_Y in range(len(Y)):
         YStr = np.append(YStr , f'{Y[cnt_Y]}$^o$E')
     ########## Color ##########
-    colors , levels , ticks , tickLabels , cmin , cmax = cfgc.colors(var['name'] , 'S')
+    colors , levels , ticks , tickLabels , cmin , cmax = cfgc.colors(var['name'] , band)
     ########## Terrain ##########
     terrain = io.loadmat(matPath)
     ########## Plot ##########
@@ -72,6 +75,7 @@ def plot_ppi(axis , Lon , Lat , var , staInfo , eleFix , datetimeLST , shpPath ,
     print(f"{OUTPATH} - Save!")
 
 def plot_rhi_cs(axis , X , Z , var , staInfo , azi , datetimeLST , outDir , band , method):
+    make_dir(outDir)
     OUTPATH = outDir/f"{var['name']}_{dtdt.strftime(datetimeLST , '%Y%m%d_%H%M%S')}_{azi * 10:04.0f}.png"
     ########## Grid ##########
     xTick = np.arange(axis['xMin'] * 10 , axis['xMax'] * 10 + axis['xInt'] * 10 , axis['xInt'] * 10) / 10
@@ -113,6 +117,7 @@ def plot_cv(axis , Lon , Lat , var , staInfo , datetimeLST , shpPath , matPath ,
     from cartopy.io.shapereader import Reader as shprd
     from cartopy.feature import ShapelyFeature as shpft
 
+    make_dir(outDir)
     OUTPATH = outDir/f"{var['name']}_{dtdt.strftime(datetimeLST , '%Y%m%d_%H%M%S')}.png"
     ########## Grid ##########
     X = np.arange(axis['xMin'] * 10 , axis['xMax'] * 10 + axis['xInt'] * 10 , axis['xInt'] * 10) / 10
@@ -169,10 +174,10 @@ def plot_rhi_cs_reorder(axis , XG , ZG , var , staInfo , azi , datetimeLST , out
     OUTPATH = outDir/f"{var['name']}_{dtdt.strftime(datetimeLST , '%Y%m%d_%H%M%S')}_{azi * 10:04.0f}.dat"
     var['data'].tofile(f'{str(OUTPATH)}')
 
-def plot_rhi_reorder(axis , XG , ZG , var , staInfo , azi , datetimeStrLST , outDir , band):
+def plot_rhi_reorder(axis , XG , ZG , var , staInfo , azi , datetimeLST , outDir , band):
     method = 'RHI'
-    plot_rhi_cs_reorder(axis , XG , ZG , var , staInfo , azi , datetimeStrLST , outDir , band , method)
+    plot_rhi_cs_reorder(axis , XG , ZG , var , staInfo , azi , datetimeLST , outDir , band , method)
 
-def plot_cs_reorder(axis , XG , ZG , var , staInfo , azi , datetimeStrLST , outDir , band):
+def plot_cs_reorder(axis , XG , ZG , var , staInfo , aziMean , datetimeLST , outDir , band):
     method = 'CS'
-    plot_rhi_cs_reorder(axis , XG , ZG , var , staInfo , azi , datetimeStrLST , outDir , band , method)
+    plot_rhi_cs_reorder(axis , XG , ZG , var , staInfo , aziMean , datetimeLST , outDir , band , method)

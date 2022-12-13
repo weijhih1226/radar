@@ -1,9 +1,10 @@
 #!/home/C.cwj/anaconda3/envs/pyart_env/bin/python3
+# -*- coding:utf-8 -*-
 
 ########################################
 ######## plot_nexrad_levelII.py ########
 ######## Author: Wei-Jhih Chen #########
-######### Update: 2022/07/20 ###########
+######### Update: 2022/12/12 ###########
 ########################################
 
 import os
@@ -15,27 +16,30 @@ from filter import *
 from convert_grid import *
 from cross_section import *
 from plot_radar import *
+from pathlib import Path
 from datetime import datetime as dtdt
 from scipy.interpolate import griddata as gd
 
 ########## Case Setting ##########
-case_date = '20200716'
-# case_time = '043300'
-# case_time = '043900'    # ZDR Best
-# case_time = '044500'    # KDP Best
-# case_time = '045100'
-# case_time = '045700'
-case_time = '050300'    # DBZ Best
-# case_time = '050900'
-# case_time = '051500'
+CASE_DATE = '20200716'
+# CASE_TIME = '043300'
+# CASE_TIME = '043900'    # ZDR Best
+# CASE_TIME = '044500'    # KDP Best
+# CASE_TIME = '045100'
+# CASE_TIME = '045700'
+CASE_TIME = '050300'    # DBZ Best
+# CASE_TIME = '050900'
+# CASE_TIME = '051500'
 
-plot_type = 'CS'
+STATION_NAME = 'RCWF'
+BAND = 'S'
+PLOT_TYPE = 'CS'
+SCAN_TYPE = 'PPI'
+
 sel_var = []            # All: []
 sel_aziCS = [200 , 201 , 202 , 203 , 204 , 205 , 206 , 207 , 208 , 209 , 210]          # NP: []
 
 ########## Parameters Setting ##########
-station_name = 'RCWF'
-scan_type = 'PPI'
 flRH_min = 0.7
 flRH_max = 1.05
 flSW_max = 4
@@ -49,31 +53,24 @@ latitude_NTU = 24.76395
 altitude_NTU = 0.01         # Units: km
 
 ########## Path Setting ##########
-homeDir = '/home/C.cwj/Radar/'
-inDir = f'{homeDir}cases/RAW-{station_name}/{case_date}/'
-inPath = f'{inDir}/{case_date}{case_time}.raw'
-shpPath = f'{homeDir}Tools/shp/taiwan_county/COUNTY_MOI_1090820.shp'     # TWNcountyTWD97
-matPath = f'{homeDir}Tools/mat/QPESUMS_terrain.mat'                      # TWNterrainTWD97
-
-########## Create Directory ##########
-outDir = f'{homeDir}pic/{station_name}/{case_date}/'
-outDir2 = f'{homeDir}pic/{station_name}/{case_date}/Reorder/'
-if not(os.path.isdir(f'{outDir}{plot_type}/')):
-    os.makedirs(f'{outDir}{plot_type}/')
-    print(f'Create Directory: {outDir}{plot_type}/')
-if not(os.path.isdir(f'{outDir2}{plot_type}/')):
-    os.makedirs(f'{outDir2}{plot_type}/')
-    print(f'Create Directory: {outDir2}{plot_type}/')
+INEXT = '.raw'
+HOMEDIR = Path(r'/home/C.cwj/Radar')
+INDIR = HOMEDIR/'cases'/f'RAW-{STATION_NAME}'/CASE_DATE
+INPATH = INDIR/f'{CASE_DATE}{CASE_TIME}{INEXT}'
+SHP_PATH = HOMEDIR/'Tools'/'shp'/'taiwan_county'/'COUNTY_MOI_1090820.shp'    # TWNcountyTWD97
+MAT_PATH = HOMEDIR/'Tools'/'mat'/'QPESUMS_terrain.mat'                       # TWNterrainTWD97
+OUTDIR = HOMEDIR/'pic'/STATION_NAME/CASE_DATE
+OUTDIR_CS = HOMEDIR/'pic'/STATION_NAME/CASE_DATE/PLOT_TYPE
+OUTDIR_REORDER = HOMEDIR/'pic'/STATION_NAME/CASE_DATE/PLOT_TYPE/'Reorder'
 
 ########## Read Variables ##########
-instrument_name = 'NEXRAD WSR-88D'  # Instrument Name
-data_type = 'Level-II'
-radar = pa.io.read_nexrad_archive(inPath)
+INSTRUMENT_NAME = 'NEXRAD WSR-88D'  # Instrument Name
+DATA_TYPE = 'Level-II'
+radar = pa.io.read_nexrad_archive(INPATH)
 
 # Time
 datetime = dtdt.strptime(radar.time['units'][14:34] , '%Y-%m-%dT%H:%M:%SZ')
-dateStrLST = dtdt.strftime(datetime + dt.timedelta(hours = 8) , '%Y%m%d')
-timeStrLST = dtdt.strftime(datetime + dt.timedelta(hours = 8) , '%H%M%S')
+datetimeLST = datetime + dt.timedelta(hours = 8)
 datetimeStrLST = dtdt.strftime(datetime + dt.timedelta(hours = 8) , '%Y/%m/%d %H:%M:%S LST')
 
 # Station
@@ -109,7 +106,7 @@ eleFix = np.empty([num_eleA])
 for cnt_eleA in np.arange(0 , num_eleA):
     eleFix[cnt_eleA] = np.mean(Elevation[idx_swpStart[cnt_eleA] : idx_swpEnd[cnt_eleA] + 1])
 
-scan_type = radar.scan_type
+SCAN_TYPE = radar.scan_type
 vcp_pattern = radar.metadata['vcp_pattern']
 unambiguous_range = radar.instrument_parameters['unambiguous_range']['data'] / 1000     # Units: km
 nyquist_velocity = radar.instrument_parameters['nyquist_velocity']['data']              # Units: m/s
@@ -271,7 +268,7 @@ for cnt_eleA in np.arange(0 , num_eleA):
 ########## Cross Section ##########
 
 
-for cnt_sel_aziCS in np.arange(0 , num_sel_aziCS):
+for cnt_sel_aziCS in np.arange(num_sel_aziCS):
     # Cartesian Grid
     if cnt_sel_aziCS == num_sel_aziCS - 1:
         xMin = dis_NTU ;    xMax = dis_NTU + 40 ;   xInt = 0.25
@@ -285,7 +282,7 @@ for cnt_sel_aziCS in np.arange(0 , num_sel_aziCS):
     X , Z = np.meshgrid(x , z)
     XG , ZG = np.meshgrid(xG , zG)
 
-    for cnt_var in np.arange(0 , num_var):
+    for cnt_var in np.arange(num_var):
         ########## Convert CS Grid ##########
         if var_name[cnt_var] == 'DZ' or var_name[cnt_var] == 'ZD' or var_name[cnt_var] == 'PH' or var_name[cnt_var] == 'KD' or var_name[cnt_var] == 'RH':
             eleFixCS = np.append(eleFix[0:6:2] , eleFix[6:18])
@@ -302,9 +299,9 @@ for cnt_sel_aziCS in np.arange(0 , num_sel_aziCS):
         HgtEEM = np.empty([num_ele , num_rng])
         DisEEM_G = np.empty([num_eleG , num_rngG])
         HgtEEM_G = np.empty([num_eleG , num_rngG])
-        for cnt_ele in np.arange(0 , num_ele):
+        for cnt_ele in np.arange(num_ele):
             DisEEM[cnt_ele , :] , HgtEEM[cnt_ele , :] = equivalent_earth_model(eleFixCS[cnt_ele] , altitude , range)
-        for cnt_eleG in np.arange(0 , num_eleG):
+        for cnt_eleG in np.arange(num_eleG):
             DisEEM_G[cnt_eleG , :] , HgtEEM_G[cnt_eleG , :] = equivalent_earth_model(eleFixCS_G[cnt_eleG] , altitude , rangeG)
         points = np.hstack([DisEEM.reshape([DisEEM.size , 1]) , HgtEEM.reshape([HgtEEM.size , 1])])
         
@@ -317,15 +314,13 @@ for cnt_sel_aziCS in np.arange(0 , num_sel_aziCS):
         varXZ = gd(points , varP , (X , Z) , method = 'linear' , fill_value = np.nan)[: , : , 0]
 
         ########## Path & Info Setting ##########
-        outPath = f'{outDir}CS/{var_name[cnt_var]}_{dateStrLST}_{timeStrLST}_{sel_aziCS[cnt_sel_aziCS] * 10:04.0f}.png'
-        outPath2 = f'{outDir2}CS/{var_name[cnt_var]}_{dateStrLST}_{timeStrLST}_{sel_aziCS[cnt_sel_aziCS] * 10:04.0f}.png'
-        staInfo = {'name' : station_name , 'lon' : longitude , 'lat' : latitude , 'alt' : altitude , 'scn' : scan_type}
+        staInfo = {'name' : STATION_NAME , 'lon' : longitude , 'lat' : latitude , 'alt' : altitude , 'scn' : SCAN_TYPE}
         varInfo = {'name' : var_name[cnt_var] , 'plotname' : var_plot[cnt_var] , 'units' : var_units[cnt_var]}
 
         ########## Plot CS ##########
         axis_cs = {'xMin' : xMin , 'xMax' : xMax , 'xInt' : 5 , 'zMin' : 0 , 'zMax' : 20 , 'zInt' : 1}
-        plot_cs(axis_cs , DisEEM_G , HgtEEM_G , var , varInfo , staInfo , aziMeanCS , datetimeStrLST , outPath , 'S')
-        plot_cs_reorder(axis_cs , XG , ZG , varXZ , varInfo , staInfo , aziMeanCS , datetimeStrLST , outPath2 , 'S')
+        plot_cs(axis_cs , DisEEM_G , HgtEEM_G , var , varInfo , staInfo , aziMeanCS , datetimeLST , OUTDIR_CS , BAND)
+        plot_cs_reorder(axis_cs , XG , ZG , varXZ , varInfo , staInfo , aziMeanCS , datetimeLST , OUTDIR_REORDER , BAND)
 
 # if __name__ == '__main__':
 #     main()

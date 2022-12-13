@@ -7,7 +7,7 @@
 ######### Update: 2022/12/12 ###########
 ########################################
 
-import timeit
+import time
 import numpy as np
 import datetime as dt
 from filter import *
@@ -24,7 +24,7 @@ from scipy.interpolate import griddata as gd
 CASE_DATE = '20220826'
 # CASE_DATE = '20200716'
 CASE_START = dtdt(2022 , 8 , 26 , 5 , 30 , 0)
-CASE_END = dtdt(2022 , 8 , 26 , 6 , 0 , 0)
+CASE_END = dtdt(2022 , 8 , 26 , 5 , 32 , 0)
 # CASE_DATE = '20200716'
 # CASE_TIME = '043159'
 # CASE_TIME = '043753'    # ZDR Best
@@ -34,11 +34,12 @@ CASE_END = dtdt(2022 , 8 , 26 , 6 , 0 , 0)
 # CASE_TIME = '050129'    # DBZ Best
 # CASE_TIME = '050723'
 # CASE_TIME = '051317'
-PLOT_TYPE = 'PPPI'
-SCAN_TYPE = 'RHI'
+
 STATION_NAME = 'NTU'    # Station Name
 PRODUCT_ID = '0092'     # Product number
 BAND = 'X'
+SCAN_TYPE = 'RHI'
+PLOT_TYPE = 'PPPI'
 
 SEL_ELE = [2.5 , 3.6 , 4.6 , 6.2 , 9.8 , 14.5 , 19.7 , 25.4 , 30.2]
 SEL_AZI = []
@@ -114,6 +115,16 @@ RH_MIN = 0.7
 RH_MAX = 1.1
 INVALID = -999
 
+def timer(func):
+    def wrap():
+        t_start = time.time()
+        print('Processing...')
+        func()
+        t_end = time.time()
+        t_count = t_end - t_start
+        print(f'Runtime: {t_count} second(s) - Finish!')
+    return wrap
+
 def plot_pseudo_ppi(files , selEles , inVars , shpPath , matPath , outDir):
     num_file = len(files)
     num_eleSel = len(selEles)
@@ -175,8 +186,9 @@ def plot_single_rhi(infile):
      sweep_start_ray_index , sweep_end_ray_index , 
      range , azimuth , elevation , fields) = reader_corrected_by_radar_constant(infile)
 
+@timer
 def main():
-    make_dirs([OUTDIR , OUTDIR_REORDER , OUTDIR_SC , OUTDIR_PPPI , OUTDIR_CV])
+    # make_dirs(OUTDIR , OUTDIR_REORDER , OUTDIR_SC , OUTDIR_PPPI , OUTDIR_CV)
     SEL_TIMES = find_volume_scan_times(INPATHS , CASE_START , CASE_END)
 
     # Plot Each Sweep
@@ -307,6 +319,4 @@ def main():
         # # sweep_end_ray_index = np.append(sweep_end_ray_index , cnt_ray_all - 1)
 
 if __name__ == '__main__':
-    print('Processing Start!')
-    RUNTIME = timeit.timeit(main , number = 1)
-    print(f'Runtime: {RUNTIME} second(s) - Processing End!')
+    main()
