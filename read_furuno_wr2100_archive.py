@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 from datetime import datetime as dtdt
 
-INSTRUMENT_NAME = 'FURUNO WR-2100'  # Instrument Name
+INSTRUMENT_NAME = 'FURUNO WR2100'  # Instrument Name
 DATA_TYPE = 'binary'
 
 def reader(inPath: Path) -> tuple[dict[str , dtdt] , dict[str , str] , dict[str , float] , str , 
