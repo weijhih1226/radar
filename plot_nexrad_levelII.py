@@ -48,9 +48,9 @@ flPH_num = 5
 smPH_num = 27
 _FillValue = -9999.
 
-longitude_NTU = 121.81599
-latitude_NTU = 24.76395
-altitude_NTU = 0.01         # Units: km
+LONGITUDE_NTU = 121.81599
+LATITUDE_NTU = 24.76395
+ALTITUDE_NTU = 0.01         # Units: km
 
 ########## Path Setting ##########
 INEXT = '.raw'
@@ -78,7 +78,7 @@ longitude = radar.longitude['data'][0]
 latitude = radar.latitude['data'][0]
 altitude = radar.altitude['data'][0] / 1000     # Units: km
 # Find Azimuth and Distance across the Other Station
-azi_NTU , dis_NTU = find_nearest_azimuth(longitude , latitude , longitude_NTU , latitude_NTU)   # 172.67680892202117 , 34.635276253600125
+azi_NTU , dis_NTU = find_nearest_azimuth(longitude , latitude , LONGITUDE_NTU , LATITUDE_NTU)   # 172.67680892202117 , 34.635276253600125
 sel_aziCS = np.append(sel_aziCS , azi_NTU)
 # dis_NTU = 34.75
 
@@ -142,7 +142,7 @@ sel_aziCS_val_all.fill(np.nan)
 
 ########## Plot PPI ##########
 # for cnt_ele in np.arange(num_ele - 1 , num_ele):
-for cnt_eleA in np.arange(0 , num_eleA):
+for cnt_eleA in np.arange(num_eleA):
     ########## Select Variables (VCP215) ##########
     cnt_swp = radar.sweep_number['data'][cnt_eleA]
     if cnt_swp == 0 or cnt_swp == 2 or cnt_swp == 4:

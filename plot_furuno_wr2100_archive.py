@@ -10,15 +10,17 @@
 import time
 import numpy as np
 import datetime as dt
+from pathlib import Path
+from datetime import datetime as dtdt
+from scipy.interpolate import griddata as gd
+
+from tools import timer
 from filter import *
 from convert_grid import *
 from attenuation_correction import *
 from read_furuno_wr2100_archive import *
 from plot_radar import *
 from plot_consistency import *
-from pathlib import Path
-from datetime import datetime as dtdt
-from scipy.interpolate import griddata as gd
 
 ########## INPUT Setting ##########
 CASE_DATE = '20220826'
@@ -50,11 +52,14 @@ SEL_AZI_NUM = []
 # SEL_AZI_NUM = [2 , 34 , 25]
 
 INEXT = '[.gz|.rhi]'
-HOMEDIR = Path(r'/home/C.cwj/Radar')
+# HOMEDIR = Path(r'/home/C.cwj/Radar')
+HOMEDIR = Path(r'C:\Users\wjchen\Documents\Research\Radar')
 INDIR = HOMEDIR/'cases'/f'RAW-{STATION_NAME}'/CASE_DATE
 INPATHS = INDIR.glob(f'{PRODUCT_ID}_{CASE_DATE}_*{INEXT}')
 SHP_PATH = HOMEDIR/'Tools'/'shp'/'taiwan_county'/'COUNTY_MOI_1090820.shp'   # TWNcountyTWD97
 MAT_PATH = HOMEDIR/'Tools'/'mat'/'QPESUMS_terrain.mat'                      # TWNterrainTWD97
+DEM_PATH = HOMEDIR/'Tools'/'dem'/'dem_500m.tif'                             # TWNterrainTWD97
+PIC_PATH = HOMEDIR/'Tools'/'dem'/'dem_500m.png'                             # TWNterrainTWD97
 OUTDIR = HOMEDIR/'pic'/STATION_NAME/CASE_DATE/SCAN_TYPE
 OUTDIR_REORDER = HOMEDIR/'pic'/STATION_NAME/CASE_DATE/'Reorder'/SCAN_TYPE
 OUTDIR_SC = HOMEDIR/'pic'/STATION_NAME/CASE_DATE/'SC'
@@ -114,16 +119,6 @@ DZ_MIN = 0
 RH_MIN = 0.7
 RH_MAX = 1.1
 INVALID = -999
-
-def timer(func):
-    def wrap():
-        t_start = time.time()
-        print('Processing...')
-        func()
-        t_end = time.time()
-        t_count = t_end - t_start
-        print(f'Runtime: {t_count} second(s) - Finish!')
-    return wrap
 
 def plot_pseudo_ppi(files , selEles , inVars , shpPath , matPath , outDir):
     num_file = len(files)
@@ -199,120 +194,105 @@ def main():
     # X_G , Z_G = reorder_grid_map(X_MIN_REORDER , X_MAX_REORDER , X_INT_REORDER , Z_MIN_REORDER , Z_MAX_REORDER , Z_INT_REORDER)
 
     for sel_time in SEL_TIMES:
-        (datetimes , NULL , NULL , NULL , 
-         LATITUDE , LONGITUDE , ALTITUDE , 
-         NULL , NULL , Fixed_angle , 
-         Sweep_start_ray_index , Sweep_end_ray_index , 
-         Range , Azimuth , Elevation , Fields) = read_volume_scan(INDIR , PRODUCT_ID , sel_time , INEXT)
+    #     (datetimes , NULL , NULL , NULL , 
+    #      LATITUDE , LONGITUDE , ALTITUDE , 
+    #      NULL , NULL , Fixed_angle , 
+    #      Sweep_start_ray_index , Sweep_end_ray_index , 
+    #      Range , Azimuth , Elevation , Fields) = read_volume_scan(INDIR , PRODUCT_ID , sel_time , INEXT)
 
-        datetimeLST = datetimes['data'][0] + dt.timedelta(hours = 8)
-        Fixed_angle = Fixed_angle['data']
-        Sweep_start_ray_index = Sweep_start_ray_index['data']
-        Sweep_end_ray_index = Sweep_end_ray_index['data']
-        Range = Range['data']
-        Azimuth = Azimuth['data']
-        Elevation = Elevation['data']
+    #     datetimeLST = datetimes['data'][0] + dt.timedelta(hours = 8)
+    #     Fixed_angle = Fixed_angle['data']
+    #     Sweep_start_ray_index = Sweep_start_ray_index['data']
+    #     Sweep_end_ray_index = Sweep_end_ray_index['data']
+    #     Range = Range['data']
+    #     Azimuth = Azimuth['data']
+    #     Elevation = Elevation['data']
 
-        for var in VAR_IN:
-            VAR[var]['data'] = Fields[var]['data']
+    #     for var in VAR_IN:
+    #         VAR[var]['data'] = Fields[var]['data']
 
-        # Invalid Value
-        for var in VAR_IN:
-            VAR[var]['data'] = ma.array(VAR[var]['data'] , mask = VAR[var]['data'] == INVALID , copy = False)
-        # varDZ
-        for var in ['DBZ' , 'ZDR' , 'PHIDP' , 'KDP' , 'RHOHV' , 'VEL']:
-            VAR[var]['data'] = var_filter(VAR['DBZ']['data'] , VAR[var]['data'] , DZ_MIN , None)
-        # varRH
-        for var in ['DBZ' , 'ZDR' , 'PHIDP' , 'KDP' , 'VEL']:
-            VAR[var]['data'] = var_filter(VAR['RHOHV']['data'] , VAR[var]['data'] , RH_MIN , RH_MAX)
-        # Attenuation Correction
-        VAR['DBZ_AC']['data'] , VAR['ZDR_AC']['data'] = attenuation_correction_X(VAR['DBZ']['data'] , VAR['ZDR']['data'] , VAR['KDP']['data'] , Range[1] - Range[0])
+    #     # Invalid Value
+    #     for var in VAR_IN:
+    #         VAR[var]['data'] = ma.array(VAR[var]['data'] , mask = VAR[var]['data'] == INVALID , copy = False)
+    #     # varDZ
+    #     for var in ['DBZ' , 'ZDR' , 'PHIDP' , 'KDP' , 'RHOHV' , 'VEL']:
+    #         VAR[var]['data'] = var_filter(VAR['DBZ']['data'] , VAR[var]['data'] , DZ_MIN , None)
+    #     # varRH
+    #     for var in ['DBZ' , 'ZDR' , 'PHIDP' , 'KDP' , 'VEL']:
+    #         VAR[var]['data'] = var_filter(VAR['RHOHV']['data'] , VAR[var]['data'] , RH_MIN , RH_MAX)
+    #     # Attenuation Correction
+    #     VAR['DBZ_AC']['data'] , VAR['ZDR_AC']['data'] = attenuation_correction_X(VAR['DBZ']['data'] , VAR['ZDR']['data'] , VAR['KDP']['data'] , Range[1] - Range[0])
 
-        ########## Plot CV ##########
-        STA_INFO = {'name' : STATION_NAME , 'lon' : LONGITUDE['data'] , 'lat' : LATITUDE['data'] , 'alt' : ALTITUDE['data'] , 'scn' : SCAN_TYPE}
+    #     ########## Plot CV ##########
+    #     STA_INFO = {'name' : STATION_NAME , 'lon' : LONGITUDE['data'] , 'lat' : LATITUDE['data'] , 'alt' : ALTITUDE['data'] , 'scn' : SCAN_TYPE}
 
-        LonCV , LatCV , NULL = radial_CV_grid(AXIS_REORDER , Fixed_angle , LONGITUDE['data'] , LATITUDE['data'])
-        # VAR['DBZ_AC']['data'] = radial_CV(AXIS_REORDER , ALTITUDE['data'] , Fixed_angle , Sweep_start_ray_index , Sweep_end_ray_index , Range , Elevation , VAR['DBZ_AC']['data'])
-        # plot_cv(AXIS_PPI , LonCV , LatCV , VAR['DBZ_AC'] , STA_INFO , datetimeLST , SHP_PATH , MAT_PATH , OUTDIR_CV , band = BAND)
+    #     LonCV , LatCV , NULL = radial_CV_grid(AXIS_REORDER , Fixed_angle , LONGITUDE['data'] , LATITUDE['data'])
+    #     # VAR['DBZ_AC']['data'] = radial_CV(AXIS_REORDER , ALTITUDE['data'] , Fixed_angle , Sweep_start_ray_index , Sweep_end_ray_index , Range , Elevation , VAR['DBZ_AC']['data'])
+    #     # plot_cv(AXIS_PPI , LonCV , LatCV , VAR['DBZ_AC'] , STA_INFO , datetimeLST , SHP_PATH , MAT_PATH , OUTDIR_CV , band = BAND)
 
-        VAR['ZDR_AC']['data'] = radial_CV(AXIS_REORDER , ALTITUDE['data'] , Fixed_angle , Sweep_start_ray_index , Sweep_end_ray_index , Range , Elevation , VAR['ZDR_AC']['data'])
-        plot_cv(AXIS_PPI , LonCV , LatCV , VAR['ZDR_AC'] , STA_INFO , datetimeLST , SHP_PATH , MAT_PATH , OUTDIR_CV , band = BAND)
+    #     VAR['ZDR_AC']['data'] = radial_CV(AXIS_REORDER , ALTITUDE['data'] , Fixed_angle , Sweep_start_ray_index , Sweep_end_ray_index , Range , Elevation , VAR['ZDR_AC']['data'])
+    #     plot_cv(AXIS_PPI , LonCV , LatCV , VAR['ZDR_AC'] , STA_INFO , datetimeLST , SHP_PATH , MAT_PATH , OUTDIR_CV , band = BAND)
 
-        VAR['KDP']['data'] = radial_CV(AXIS_REORDER , ALTITUDE['data'] , Fixed_angle , Sweep_start_ray_index , Sweep_end_ray_index , Range , Elevation , VAR['KDP']['data'])
-        plot_cv(AXIS_PPI , LonCV , LatCV , VAR['KDP'] , STA_INFO , datetimeLST , SHP_PATH , MAT_PATH , OUTDIR_CV , band = BAND)
+    #     VAR['KDP']['data'] = radial_CV(AXIS_REORDER , ALTITUDE['data'] , Fixed_angle , Sweep_start_ray_index , Sweep_end_ray_index , Range , Elevation , VAR['KDP']['data'])
+    #     plot_cv(AXIS_PPI , LonCV , LatCV , VAR['KDP'] , STA_INFO , datetimeLST , SHP_PATH , MAT_PATH , OUTDIR_CV , band = BAND)
 
-        VAR['RHOHV']['data'][VAR['RHOHV']['data'] < 0.8] = np.nan
-        VAR['RHOHV']['data'] = radial_CV(AXIS_REORDER , ALTITUDE['data'] , Fixed_angle , Sweep_start_ray_index , Sweep_end_ray_index , Range , Elevation , VAR['RHOHV']['data'] , ismax = False)
-        plot_cv(AXIS_PPI , LonCV , LatCV , VAR['RHOHV'] , STA_INFO , datetimeLST , SHP_PATH , MAT_PATH , OUTDIR_CV , band = BAND)
+    #     VAR['RHOHV']['data'][VAR['RHOHV']['data'] < 0.8] = np.nan
+    #     VAR['RHOHV']['data'] = radial_CV(AXIS_REORDER , ALTITUDE['data'] , Fixed_angle , Sweep_start_ray_index , Sweep_end_ray_index , Range , Elevation , VAR['RHOHV']['data'] , ismax = False)
+    #     plot_cv(AXIS_PPI , LonCV , LatCV , VAR['RHOHV'] , STA_INFO , datetimeLST , SHP_PATH , MAT_PATH , OUTDIR_CV , band = BAND)
 
 
-        # INFILES = find_volume_scan_files(INDIR , PRODUCT_ID , sel_time , INEXT)
-        
-        # plot_pseudo_ppi(INFILES , SEL_ELE , VAR_IN , SHP_PATH , MAT_PATH , OUTDIR_PPPI)
+        INFILES = find_volume_scan_files(INDIR , PRODUCT_ID , sel_time , INEXT)
+        # plot_pseudo_ppi(INFILES , SEL_ELE , VAR_IN , SHP_PATH , MAT_PATH , OUTDIR_PPPI)     # Plot Pseudo-PPI of Select Elevations
 
-        # NUM_FILE_LIST = SEL_AZI_NUM if SEL_AZI_NUM else range(len(INFILES))
-        # for cnt_file in NUM_FILE_LIST:
-        #     ########## Read ##########
-        #     (datetime , metadata , INSTRUMENT_PARAMETERS , SCAN_TYPE , 
-        #     LATITUDE , LONGITUDE , ALTITUDE , 
-        #     sweep_number , sweep_mode , aziFix , 
-        #     sweep_start_ray_index , sweep_end_ray_index , 
-        #     RANGE , azimuth , ELEVATION , fields) = reader_select(INFILES[cnt_file] , SEL_READER)
+        NUM_FILE_LIST = SEL_AZI_NUM if SEL_AZI_NUM else range(len(INFILES))
+        for cnt_file in NUM_FILE_LIST:
+            ########## Read ##########
+            (datetime , metadata , INSTRUMENT_PARAMETERS , SCAN_TYPE , 
+            LATITUDE , LONGITUDE , ALTITUDE , 
+            sweep_number , sweep_mode , aziFix , 
+            sweep_start_ray_index , sweep_end_ray_index , 
+            RANGE , azimuth , ELEVATION , fields) = reader_corrected_by_radar_constant(INFILES[cnt_file])
 
-        #     RANGE = RANGE['data']
-        #     ELEVATION = ELEVATION['data']
-        #     datetimeLST = datetime['data'] + dt.timedelta(hours = 8)
-        #     # print(INSTRUMENT_PARAMETERS['radar_constant_H'] , INSTRUMENT_PARAMETERS['radar_constant_V'])
+            RANGE = RANGE['data']
+            ELEVATION = ELEVATION['data']
+            datetimeLST = datetime['data'] + dt.timedelta(hours = 8)
+            # print(INSTRUMENT_PARAMETERS['radar_constant_H'] , INSTRUMENT_PARAMETERS['radar_constant_V'])
 
-        #     if SEL_AZI:
-        #         if not([True for azi in SEL_AZI if abs(aziFix['data'] - azi) <= 1]):
-        #             print(f"Skip Azimuth: {aziFix['data']:.2f}^o")
-        #             continue
+            if SEL_AZI:
+                if not([True for azi in SEL_AZI if abs(aziFix['data'] - azi) <= 1]):
+                    print(f"Skip Azimuth: {aziFix['data']:.2f}^o")
+                    continue
 
-        #     for var in VAR_IN:
-        #         VAR[var]['data'] = fields[var]['data']
+            for var in VAR_IN:
+                VAR[var]['data'] = fields[var]['data']
 
-        #     ########## RADAR CONSTANT CALIBRATION ##########
-        #     RC_H = RADAR_CONSTANT(
-        #         WAVELENGTH , LOSS_H , POWER_TRANSMISSION_H , GAIN_H , 
-        #         BEAMWIDTH_H , BEAMWIDTH_V , INSTRUMENT_PARAMETERS['pulse_width'] , K_2
-        #     )
-        #     RC_V = RADAR_CONSTANT(
-        #         WAVELENGTH , LOSS_V , POWER_TRANSMISSION_V , GAIN_V , 
-        #         BEAMWIDTH_H , BEAMWIDTH_V , INSTRUMENT_PARAMETERS['pulse_width'] , K_2
-        #     )
-        #     VAR['DBZ']['data'] , VAR['ZDR']['data'] = correct_Zh_Zdr_by_radar_constant(
-        #         INSTRUMENT_PARAMETERS['radar_constant_H'] , INSTRUMENT_PARAMETERS['radar_constant_V'] , 
-        #         RC_H , RC_V , VAR['DBZ']['data'] , VAR['ZDR']['data']
-        #     )
+            ########## Filters ##########
+            # varDZ
+            for var in ['DBZ' , 'ZDR' , 'PHIDP' , 'KDP' , 'RHOHV' , 'VEL']:
+                VAR[var]['data'] = var_filter(VAR['DBZ']['data'] , VAR[var]['data'] , DZ_MIN , None)
+            # varRH
+            for var in ['DBZ' , 'ZDR' , 'PHIDP' , 'KDP' , 'VEL']:
+                VAR[var]['data'] = var_filter(VAR['RHOHV']['data'] , VAR[var]['data'] , RH_MIN , RH_MAX)
+            # Attenuation Correction
+            VAR['DBZ_AC']['data'] , VAR['ZDR_AC']['data'] = attenuation_correction_X(VAR['DBZ']['data'] , VAR['ZDR']['data'] , VAR['KDP']['data'] , RANGE[1] - RANGE[0])
 
-        #     ########## Filters ##########
-        #     # varDZ
-        #     for var in ['DBZ' , 'ZDR' , 'PHIDP' , 'KDP' , 'RHOHV' , 'VEL']:
-        #         VAR[var]['data'] = var_filter(VAR['DBZ']['data'] , VAR[var]['data'] , DZ_MIN , None)
-        #     # varRH
-        #     for var in ['DBZ' , 'ZDR' , 'PHIDP' , 'KDP' , 'VEL']:
-        #         VAR[var]['data'] = var_filter(VAR['RHOHV']['data'] , VAR[var]['data'] , RH_MIN , RH_MAX)
-        #     # Attenuation Correction
-        #     VAR['DBZ_AC']['data'] , VAR['ZDR_AC']['data'] = attenuation_correction_X(VAR['DBZ']['data'] , VAR['ZDR']['data'] , VAR['KDP']['data'] , RANGE[1] - RANGE[0])
+            ########## Plot ##########
+            STA_INFO = {'name' : STATION_NAME , 'lon' : LONGITUDE['data'] , 'lat' : LATITUDE['data'] , 'alt' : ALTITUDE['data'] , 'scn' : SCAN_TYPE}
 
-        #     ########## Plot ##########
-        #     STA_INFO = {'name' : STATION_NAME , 'lon' : LONGITUDE['data'] , 'lat' : LATITUDE['data'] , 'alt' : ALTITUDE['data'] , 'scn' : SCAN_TYPE}
+            RANGE_G = np.append(RANGE , RANGE[-1] + (RANGE[-1] - RANGE[-2]))     # Units: km
+            ELEVATION_G = np.append(ELEVATION - np.append(ELEVATION[1] - ELEVATION[0] , ELEVATION[1:] - ELEVATION[:-1]) / 2 , ELEVATION[-1] + (ELEVATION[-1] - ELEVATION[-2]) / 2)
 
-        #     RANGE_G = np.append(RANGE , RANGE[-1] + (RANGE[-1] - RANGE[-2]))     # Units: km
-        #     ELEVATION_G = np.append(ELEVATION - np.append(ELEVATION[1] - ELEVATION[0] , ELEVATION[1:] - ELEVATION[:-1]) / 2 , ELEVATION[-1] + (ELEVATION[-1] - ELEVATION[-2]) / 2)
-
-        #     # DIS , HGT = equivalent_earth_model_by_elevations(ELEVATION , RANGE , ALTITUDE['data'])
-        #     DIS_G , HGT_G = equivalent_earth_model_by_elevations(ELEVATION_G , RANGE_G , ALTITUDE['data'])
-        #     # XY_POINTS = np.hstack((DIS.reshape([DIS.size , 1]) , HGT.reshape([HGT.size , 1])))
+            # DIS , HGT = equivalent_earth_model_by_elevations(ELEVATION , RANGE , ALTITUDE['data'])
+            DIS_G , HGT_G = equivalent_earth_model_by_elevations(ELEVATION_G , RANGE_G , ALTITUDE['data'])
+            # XY_POINTS = np.hstack((DIS.reshape([DIS.size , 1]) , HGT.reshape([HGT.size , 1])))
             
-        #     for var in VAR_SELECT:
-        #         # VAR_POINTS = VAR[var]['data'].reshape([VAR[var]['data'].size , 1]).filled(fill_value = np.nan)
-        #         # VAR[var]['reorder'] = gd(XY_POINTS , VAR_POINTS , (X , Z) , method = 'linear' , fill_value = np.nan)[: , : , 0]
-        #         plot_rhi(AXIS_RHI , DIS_G , HGT_G , VAR[var] , STA_INFO , aziFix['data'] , datetimeLST , OUTDIR , 'X')
-        #         # plot_rhi_reorder(AXIS_RHI , X_G , Z_G , VAR[var] , STA_INFO , aziFix['data'] , datetimeLST , OUTDIR_REORDER , 'X')
-        #     # plot_selfconsistency(AXIS_ZDRH , VAR['ZDR'] , VAR['RHOHV'] , aziFix['data'] , datetimeLST , OUTDIR_SC)
-        #     # plot_selfconsistency(AXIS_DZRH , VAR['DBZ'] , VAR['RHOHV'] , aziFix['data'] , datetimeLST , OUTDIR_SC)
+            for var in VAR_SELECT:
+                # VAR_POINTS = VAR[var]['data'].reshape([VAR[var]['data'].size , 1]).filled(fill_value = np.nan)
+                # VAR[var]['reorder'] = gd(XY_POINTS , VAR_POINTS , (X , Z) , method = 'linear' , fill_value = np.nan)[: , : , 0]
+                plot_rhi(AXIS_RHI , DIS_G , HGT_G , VAR[var] , STA_INFO , aziFix['data'] , datetimeLST , OUTDIR , 'X')
+                # plot_rhi_reorder(AXIS_RHI , X_G , Z_G , VAR[var] , STA_INFO , aziFix['data'] , datetimeLST , OUTDIR_REORDER , 'X')
+            # plot_selfconsistency(AXIS_ZDRH , VAR['ZDR'] , VAR['RHOHV'] , aziFix['data'] , datetimeLST , OUTDIR_SC)
+            # plot_selfconsistency(AXIS_DZRH , VAR['DBZ'] , VAR['RHOHV'] , aziFix['data'] , datetimeLST , OUTDIR_SC)
 
         # # sweep_start_ray_index = np.append(sweep_start_ray_index , cnt_ray_all)
         # # cnt_ray_all += total_number_of_sweep
