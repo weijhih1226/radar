@@ -115,9 +115,8 @@ VAR = {'DBZ': {'name': 'DZ' , 'plotname': 'Z$_{HH}$' , 'units': 'dBZ' , 'data': 
        'QC_INFO': {'name': 'QC' , 'plotname': 'QC Info' , 'units': '' , 'data': None} , 
        'DBZ_AC': {'name': 'DZac' , 'plotname': 'Z$_{HH}$ (AC)' , 'units': 'dBZ' , 'data': None} , 
        'ZDR_AC': {'name': 'ZDac' , 'plotname': 'Z$_{DR}$ (AC)' , 'units': 'dB' , 'data': None}}
-DZ_MIN = 0
-RH_MIN = 0.7
-RH_MAX = 1.1
+FILTER = {'DBZ': {'min': 0 , 'max': None , 'var': ['DBZ' , 'ZDR' , 'PHIDP' , 'KDP' , 'RHOHV' , 'VEL']} , 
+          'RHOHV': {'min': 0.7 , 'max': 1.1 , 'var': ['DBZ' , 'ZDR' , 'PHIDP' , 'KDP' , 'VEL']}}
 INVALID = -999
 
 def plot_pseudo_ppi(files , selEles , inVars , shpPath , matPath , outDir):
@@ -150,10 +149,7 @@ def plot_pseudo_ppi(files , selEles , inVars , shpPath , matPath , outDir):
     EleSel /= num_file
 
     # Filters
-    for var in ['DBZ' , 'ZDR' , 'PHIDP' , 'KDP' , 'RHOHV' , 'VEL']:
-        var_all[var] = var_filter(var_all['DBZ'] , var_all[var] , DZ_MIN , None)
-    for var in ['DBZ' , 'ZDR' , 'PHIDP' , 'KDP' , 'VEL']:
-        var_all[var] = var_filter(var_all['RHOHV'] , var_all[var] , RH_MIN , RH_MAX)
+    var_all = vars_filter(var_all , FILTER)
     var_all['DBZ_AC'] , var_all['ZDR_AC'] = attenuation_correction_X(var_all['DBZ'] , var_all['ZDR'] , var_all['KDP'] , Rng[1] - Rng[0])
     
     STA_INFO = {'name' : STATION_NAME , 'lon' : STA_LON['data'] , 'lat' : STA_LAT['data'] , 'alt' : STA_ALT['data'] , 'scn' : SCAN_TYPE}
@@ -180,6 +176,12 @@ def plot_single_rhi(infile):
      sweep_number , sweep_mode , aziFix , 
      sweep_start_ray_index , sweep_end_ray_index , 
      range , azimuth , elevation , fields) = reader_corrected_by_radar_constant(infile)
+
+def vars_filter(varsDict , fltsDict):
+    for flt in fltsDict.keys():
+        for var in fltsDict[flt]['var']:
+            varsDict[var]['data'] = var_filter(varsDict[flt]['data'] , varsDict[var]['data'] , fltsDict[flt]['min'] , fltsDict[flt]['max'])
+    return varsDict
 
 @timer
 def main():
@@ -214,13 +216,7 @@ def main():
     #     # Invalid Value
     #     for var in VAR_IN:
     #         VAR[var]['data'] = ma.array(VAR[var]['data'] , mask = VAR[var]['data'] == INVALID , copy = False)
-    #     # varDZ
-    #     for var in ['DBZ' , 'ZDR' , 'PHIDP' , 'KDP' , 'RHOHV' , 'VEL']:
-    #         VAR[var]['data'] = var_filter(VAR['DBZ']['data'] , VAR[var]['data'] , DZ_MIN , None)
-    #     # varRH
-    #     for var in ['DBZ' , 'ZDR' , 'PHIDP' , 'KDP' , 'VEL']:
-    #         VAR[var]['data'] = var_filter(VAR['RHOHV']['data'] , VAR[var]['data'] , RH_MIN , RH_MAX)
-    #     # Attenuation Correction
+    #     VAR = vars_filter(VAR , FILTER)
     #     VAR['DBZ_AC']['data'] , VAR['ZDR_AC']['data'] = attenuation_correction_X(VAR['DBZ']['data'] , VAR['ZDR']['data'] , VAR['KDP']['data'] , Range[1] - Range[0])
 
     #     ########## Plot CV ##########
@@ -267,13 +263,7 @@ def main():
                 VAR[var]['data'] = fields[var]['data']
 
             ########## Filters ##########
-            # varDZ
-            for var in ['DBZ' , 'ZDR' , 'PHIDP' , 'KDP' , 'RHOHV' , 'VEL']:
-                VAR[var]['data'] = var_filter(VAR['DBZ']['data'] , VAR[var]['data'] , DZ_MIN , None)
-            # varRH
-            for var in ['DBZ' , 'ZDR' , 'PHIDP' , 'KDP' , 'VEL']:
-                VAR[var]['data'] = var_filter(VAR['RHOHV']['data'] , VAR[var]['data'] , RH_MIN , RH_MAX)
-            # Attenuation Correction
+            VAR = vars_filter(VAR , FILTER)
             VAR['DBZ_AC']['data'] , VAR['ZDR_AC']['data'] = attenuation_correction_X(VAR['DBZ']['data'] , VAR['ZDR']['data'] , VAR['KDP']['data'] , RANGE[1] - RANGE[0])
 
             ########## Plot ##########
@@ -289,8 +279,8 @@ def main():
             for var in VAR_SELECT:
                 # VAR_POINTS = VAR[var]['data'].reshape([VAR[var]['data'].size , 1]).filled(fill_value = np.nan)
                 # VAR[var]['reorder'] = gd(XY_POINTS , VAR_POINTS , (X , Z) , method = 'linear' , fill_value = np.nan)[: , : , 0]
-                plot_rhi(AXIS_RHI , DIS_G , HGT_G , VAR[var] , STA_INFO , aziFix['data'] , datetimeLST , OUTDIR , 'X')
-                # plot_rhi_reorder(AXIS_RHI , X_G , Z_G , VAR[var] , STA_INFO , aziFix['data'] , datetimeLST , OUTDIR_REORDER , 'X')
+                plot_rhi(AXIS_RHI , DIS_G , HGT_G , VAR[var] , STA_INFO , aziFix['data'] , datetimeLST , OUTDIR , BAND)
+                # plot_rhi_reorder(AXIS_RHI , X_G , Z_G , VAR[var] , STA_INFO , aziFix['data'] , datetimeLST , OUTDIR_REORDER , BAND)
             # plot_selfconsistency(AXIS_ZDRH , VAR['ZDR'] , VAR['RHOHV'] , aziFix['data'] , datetimeLST , OUTDIR_SC)
             # plot_selfconsistency(AXIS_DZRH , VAR['DBZ'] , VAR['RHOHV'] , aziFix['data'] , datetimeLST , OUTDIR_SC)
 

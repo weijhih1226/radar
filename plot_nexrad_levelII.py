@@ -74,11 +74,11 @@ datetimeLST = datetime + dt.timedelta(hours = 8)
 datetimeStrLST = dtdt.strftime(datetime + dt.timedelta(hours = 8) , '%Y/%m/%d %H:%M:%S LST')
 
 # Station
-longitude = radar.longitude['data'][0]
-latitude = radar.latitude['data'][0]
-altitude = radar.altitude['data'][0] / 1000     # Units: km
+LONGITUDE = radar.longitude['data'][0]
+LATITUDE = radar.latitude['data'][0]
+ALTITUDE = radar.altitude['data'][0] / 1000     # Units: km
 # Find Azimuth and Distance across the Other Station
-azi_NTU , dis_NTU = find_nearest_azimuth(longitude , latitude , LONGITUDE_NTU , LATITUDE_NTU)   # 172.67680892202117 , 34.635276253600125
+azi_NTU , dis_NTU = find_nearest_azimuth(LONGITUDE , LATITUDE , LONGITUDE_NTU , LATITUDE_NTU)   # 172.67680892202117 , 34.635276253600125
 sel_aziCS = np.append(sel_aziCS , azi_NTU)
 # dis_NTU = 34.75
 
@@ -191,8 +191,8 @@ for cnt_eleA in np.arange(num_eleA):
     num_azi = num_Azi[cnt_eleA]
     azimuth = Azimuth[idx_swpStart[cnt_eleA] : idx_swpEnd[cnt_eleA] + 1]
     azimuthG = np.append(azimuth , azimuth[0]) - (360 / num_azi / 2) % 360
-    disEEM_G , hgtEEM_G = equivalent_earth_model(eleFix[cnt_eleA] , altitude , rangeG)
-    LonEEM_G , LatEEM_G = polar_to_lonlat(azimuthG , disEEM_G , hgtEEM_G , longitude , latitude)
+    disEEM_G , hgtEEM_G = equivalent_earth_model(eleFix[cnt_eleA] , ALTITUDE , rangeG)
+    LonEEM_G , LatEEM_G = polar_to_lonlat(azimuthG , disEEM_G , hgtEEM_G , LONGITUDE , LATITUDE)
 
     ########## Filters ##########
     for nameVar_in in nameVars_in:
@@ -300,9 +300,9 @@ for cnt_sel_aziCS in np.arange(num_sel_aziCS):
         DisEEM_G = np.empty([num_eleG , num_rngG])
         HgtEEM_G = np.empty([num_eleG , num_rngG])
         for cnt_ele in np.arange(num_ele):
-            DisEEM[cnt_ele , :] , HgtEEM[cnt_ele , :] = equivalent_earth_model(eleFixCS[cnt_ele] , altitude , range)
+            DisEEM[cnt_ele , :] , HgtEEM[cnt_ele , :] = equivalent_earth_model(eleFixCS[cnt_ele] , ALTITUDE , range)
         for cnt_eleG in np.arange(num_eleG):
-            DisEEM_G[cnt_eleG , :] , HgtEEM_G[cnt_eleG , :] = equivalent_earth_model(eleFixCS_G[cnt_eleG] , altitude , rangeG)
+            DisEEM_G[cnt_eleG , :] , HgtEEM_G[cnt_eleG , :] = equivalent_earth_model(eleFixCS_G[cnt_eleG] , ALTITUDE , rangeG)
         points = np.hstack([DisEEM.reshape([DisEEM.size , 1]) , HgtEEM.reshape([HgtEEM.size , 1])])
         
         cmin = cfgc.colors(var_name[cnt_var] , 'S')[4]
@@ -314,13 +314,13 @@ for cnt_sel_aziCS in np.arange(num_sel_aziCS):
         varXZ = gd(points , varP , (X , Z) , method = 'linear' , fill_value = np.nan)[: , : , 0]
 
         ########## Path & Info Setting ##########
-        staInfo = {'name' : STATION_NAME , 'lon' : longitude , 'lat' : latitude , 'alt' : altitude , 'scn' : SCAN_TYPE}
+        staInfo = {'name' : STATION_NAME , 'lon' : LONGITUDE , 'lat' : LATITUDE , 'alt' : ALTITUDE , 'scn' : SCAN_TYPE}
         varInfo = {'name' : var_name[cnt_var] , 'plotname' : var_plot[cnt_var] , 'units' : var_units[cnt_var]}
 
         ########## Plot CS ##########
-        axis_cs = {'xMin' : xMin , 'xMax' : xMax , 'xInt' : 5 , 'zMin' : 0 , 'zMax' : 20 , 'zInt' : 1}
-        plot_cs(axis_cs , DisEEM_G , HgtEEM_G , var , varInfo , staInfo , aziMeanCS , datetimeLST , OUTDIR_CS , BAND)
-        plot_cs_reorder(axis_cs , XG , ZG , varXZ , varInfo , staInfo , aziMeanCS , datetimeLST , OUTDIR_REORDER , BAND)
+        AXIS_CS = {'xMin' : xMin , 'xMax' : xMax , 'xInt' : 5 , 'zMin' : 0 , 'zMax' : 20 , 'zInt' : 1}
+        plot_cs(AXIS_CS , DisEEM_G , HgtEEM_G , var , varInfo , staInfo , aziMeanCS , datetimeLST , OUTDIR_CS , BAND)
+        plot_cs_reorder(AXIS_CS , XG , ZG , varXZ , varInfo , staInfo , aziMeanCS , datetimeLST , OUTDIR_REORDER , BAND)
 
 # if __name__ == '__main__':
 #     main()
