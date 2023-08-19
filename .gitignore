@@ -1,7 +1,12 @@
-# 目錄
+# Directories
 __pycache__/
 cases/
+pic/
+daily/
 
-# 檔案
+# Files
+*.gz
+*.rhi
+*.scn
 *.tif
 *.png
