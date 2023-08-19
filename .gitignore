@@ -3,6 +3,7 @@ __pycache__/
 cases/
 pic/
 daily/
+corr/
 
 # Files
 *.gz
